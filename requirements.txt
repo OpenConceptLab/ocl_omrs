@@ -1,0 +1,4 @@
+Django==1.6
+python-dateutil==2.1
+django-extensions
+MySQL-python==1.2.5
