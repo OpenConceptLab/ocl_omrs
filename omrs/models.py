@@ -14,7 +14,8 @@ from django.db import models
 
 class Concept(models.Model):
     concept_id = models.IntegerField(primary_key=True)
-    retired = models.IntegerField()
+#    retired = models.IntegerField()
+    retired = models.BooleanField()
     short_name = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     form_text = models.TextField(blank=True)
@@ -44,8 +45,16 @@ class Concept(models.Model):
 
 class ConceptAnswer(models.Model):
     concept_answer_id = models.IntegerField(primary_key=True)
-    concept_id = models.IntegerField()
-    answer_concept = models.IntegerField(blank=True, null=True)
+
+    # answers for this concept
+#    concept_id = models.IntegerField()
+    question_concept = models.ForeignKey('Concept',
+        db_column='concept_id', related_name='question_answer')
+
+#    answer_concept = models.IntegerField(blank=True, null=True)
+    answer_concept = models.ForeignKey('Concept',
+        db_column='answer_concept', related_name='answer')
+
     answer_drug = models.IntegerField(blank=True, null=True)
     creator = models.IntegerField()
     date_created = models.DateTimeField()
@@ -122,6 +131,7 @@ class ConceptDescription(models.Model):
         managed = False
         db_table = 'concept_description'
 
+
 class ConceptMapType(models.Model):
     concept_map_type_id = models.IntegerField(primary_key=True)
     name = models.CharField(unique=True, max_length=255)
@@ -136,9 +146,13 @@ class ConceptMapType(models.Model):
     date_retired = models.DateTimeField(blank=True, null=True)
     retire_reason = models.CharField(max_length=255, blank=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_map_type'
+
+    def __unicode__(self):
+        return self.name
 
 
 class ConceptName(models.Model):
@@ -222,26 +236,35 @@ class ConceptProposal(models.Model):
         managed = False
         db_table = 'concept_proposal'
 
+
 class ConceptProposalTagMap(models.Model):
     concept_proposal = models.ForeignKey(ConceptProposal)
     concept_name_tag = models.ForeignKey(ConceptNameTag)
+
     class Meta:
         managed = False
         db_table = 'concept_proposal_tag_map'
+
 
 class ConceptReferenceMap(models.Model):
     concept_map_id = models.IntegerField(primary_key=True)
     creator = models.IntegerField()
     date_created = models.DateTimeField()
-    concept_id = models.IntegerField()
+#    concept_id = models.IntegerField()
+    concept = models.ForeignKey('Concept')
     uuid = models.CharField(unique=True, max_length=38)
-    concept_reference_term_id = models.IntegerField()
-    concept_map_type_id = models.IntegerField()
+#    concept_reference_term_id = models.IntegerField()
+    concept_reference_term = models.ForeignKey('ConceptReferenceTerm')
+#    concept_map_type_id = models.IntegerField()
+    map_type = models.ForeignKey('ConceptMapType',
+        db_column='concept_map_type_id')
     changed_by = models.IntegerField(blank=True, null=True)
     date_changed = models.DateTimeField(blank=True, null=True)
+
     class Meta:
         managed = False
         db_table = 'concept_reference_map'
+
 
 class ConceptReferenceSource(models.Model):
     concept_source_id = models.IntegerField(primary_key=True)
@@ -255,13 +278,19 @@ class ConceptReferenceSource(models.Model):
     date_retired = models.DateTimeField(blank=True, null=True)
     retire_reason = models.CharField(max_length=255, blank=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_reference_source'
 
+    def __unicode__(self):
+        return self.name
+
+
 class ConceptReferenceTerm(models.Model):
     concept_reference_term_id = models.IntegerField(primary_key=True)
-    concept_source_id = models.IntegerField()
+#    concept_source_id = models.IntegerField()
+    concept_source = models.ForeignKey('ConceptReferenceSource')
     name = models.CharField(max_length=255, blank=True)
     code = models.CharField(max_length=255)
     version = models.CharField(max_length=255, blank=True)
@@ -275,9 +304,15 @@ class ConceptReferenceTerm(models.Model):
     date_retired = models.DateTimeField(blank=True, null=True)
     retire_reason = models.CharField(max_length=255, blank=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_reference_term'
+
+    def __unicode__(self):
+        # self.name is null
+        return self.code
+
 
 class ConceptReferenceTermMap(models.Model):
     concept_reference_term_map_id = models.IntegerField(primary_key=True)
