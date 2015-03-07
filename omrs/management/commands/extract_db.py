@@ -26,6 +26,36 @@ def add_f(dictionary, key, value):
     if value is not None:
         dictionary[key] = value
 
+source_directory = [
+    ('IHTSDO','SNOMED-CT'),
+    ('IHTSDO','SNOMED-NP'),
+    ('WHO','ICD-10-WHO'),
+    ('NLM','RxNORM,RxNORM'),
+    ('NLM','RxNORM-Comb'),
+    ('Regenstrief','LOINC'),
+    ('WHO','ICD-10-WHO-NP'),
+    ('WHO','ICD-10-WHO-2nd'),
+    ('WHO','ICD-10-WHO-NP2'),
+    ('HL7','HL-7-CVX'),
+    ('PIH','PIH'),
+    ('PIH','PIH-Malawi'),
+    ('AMPATH','AMPATH'),
+    ('Columbia','SNOMED-MVP'),
+    ('OpenMRS','org.openmrs.module.mdrtb'),
+    ('MVP','MVP-Amazon-Server-174'),
+    ('IHTSDO','SNOMED-US'),
+    ('HL7','HL7-2.x-Route-of-Administration'),
+    ('3BT','3BT'),
+    ('WICC','ICPC2'),
+    ('Columbia','CIEL'),
+    ('CCAM','CCAM'),
+    ('OpenMRS','org.openmrs.module.emrapi,'),
+    ('IMO','IMO-ProblemIT'),
+    ('IMO','IMO-ProcedureIT'),
+    ('VHA','NDF-RT-NUI'),
+    ('FDA','FDA-Route-of-Administration'),
+    ('NCI','NCI-Concept-Code'),
+]
 
 class Command(BaseCommand):
     help = 'Extract concepts from OpenMRS database in the form of json'
@@ -40,16 +70,16 @@ class Command(BaseCommand):
                     dest='count',
                     default=None,
                     help='If specify, only export this many concepts. Useful for testing.'),
-        make_option('--stats',
-                    action='store_true',
-                    dest='stats',
-                    default=False,
-                    help='Just print out statistics.'),
         make_option('--mapping',
                     action='store_true',
                     dest='mapping',
                     default=False,
                     help='Create mapping input file.'),
+        make_option('--concept',
+                    action='store_true',
+                    dest='concept',
+                    default=False,
+                    help='Create concept input file.'),
         make_option('--raw',
                     action='store_true',
                     dest='raw',
@@ -96,11 +126,13 @@ class Command(BaseCommand):
                 #  'locale_preferred': n.locale_preferred,
             })
         data['descriptions'] = descs
+        data['external_id'] = c.uuid
 
         extras = {}
 
+        # No need to do this anymore
         # save the source UUID as extra
-        extras['external_id'] = c.uuid
+        # extras['external_id'] = c.uuid
 
         # if the concept is of numeric type,
         # map concept's numeric type data as extras
@@ -116,7 +148,7 @@ class Command(BaseCommand):
             add_f(d, 'precise', e.precise)
             extras.update(d)
 
-        if self.mapping:
+        if self.do_mapping:
             self.handle_mapping(c)
 
         # handle concept sets
@@ -127,7 +159,7 @@ class Command(BaseCommand):
             ids = [str(c.concept_id)]
             for sc in c.conceptset_set.all():
                 ids.append(str(sc.concept.concept_id))
-            if self.mapping:
+            if self.do_mapping:
                 self.mapping_file.write('concept_set ')
                 self.mapping_file.write(' '.join(ids))
                 self.mapping_file.write('\n')
@@ -143,7 +175,7 @@ class Command(BaseCommand):
                 pass
                 # print ans.answer_concept
                 ids.append(str(ans.answer_concept.concept_id))
-            if self.mapping:
+            if self.do_mapping:
                 self.mapping_file.write('q_and_a ')
                 self.mapping_file.write(' '.join(ids))
                 self.mapping_file.write('\n')
@@ -155,6 +187,7 @@ class Command(BaseCommand):
 
         """
         if self.concept_id is not None:
+            # just do one export
             c = Concept.objects.get(concept_id=self.concept_id)
             data = self.export_concept(c)
             print json.dumps(data, indent=4)
@@ -167,13 +200,24 @@ class Command(BaseCommand):
                 break
 
             data = self.export_concept(c)
-            if self.stats:
+
+            if not self.do_concept:
                 continue
 
             if self.raw:
                 print json.dumps(data)
             else:
                 print json.dumps(data, indent=4)
+
+    def write_mapping(self, data):
+        """
+        Output mapping data to output file.
+        """
+        if self.raw:
+            self.mapping_file.write(json.dumps(data))
+        else:
+            self.mapping_file.write(json.dumps(data, indent=4))
+        self.mapping_file.write('\n')
 
     def handle_mapping(self, concept):
         """
@@ -183,16 +227,50 @@ class Command(BaseCommand):
                       r.concept_reference_term.code,
                       r.concept_reference_term.concept_source.name]
 
-            self.mapping_file.write('internal %s ' % concept.concept_id)
-            self.mapping_file.write(','.join(fields))
-            self.mapping_file.write('\n')
+            data = {}
+            data['map_type'] = r.map_type.name
+            data['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
+                self.org_id, self.source_id, concept.concept_id)
+
+
+            if r.concept_reference_term.concept_source.name == 'CIEL':
+                data['to_concept_url'] ='/orgs/%s/sources/%s/concepts/%s/' % (
+                self.org_id, self.source_id, r.concept_reference_term.code)
+            else:
+                # external
+                to_source_id = r.concept_reference_term.concept_source.name
+                to_source_id = to_source_id.replace(' ', '-')
+
+                to_org_id = None
+                for o,s in source_directory:
+                    if s == to_source_id:
+                        to_org_id = o
+                if to_org_id is None:
+                    print 'Source %s not found in list.' % to_source_id
+                    return
+
+                data['to_source_url'] ='/orgs/%s/sources/%s/' % (
+                    to_org_id, to_source_id)
+
+                data['to_concept_code'] = r.concept_reference_term.code
+                if r.concept_reference_term.name is not None:
+                    data['to_concept_name'] = r.concept_reference_term.name
+
+            self.write_mapping(data)
+
+#            self.mapping_file.write('internal %s ' % concept.concept_id)
+#            self.mapping_file.write(','.join(fields))
+#            self.mapping_file.write('\n')
 
     def handle(self, *args, **options):
         self.concept_id = options['concept_id']
-        self.stats = options['stats']
         self.count = options['count']
         self.raw = options['raw']
-        self.mapping = options['mapping']
+        self.do_mapping = options['mapping']
+        self.do_concept = options['concept']
+
+        self.org_id = 'CIELTEST'
+        self.source_id = 'CIELTEST'
 
         if self.count is not None:
             self.count = int(self.count)
@@ -201,12 +279,11 @@ class Command(BaseCommand):
         self.concept_set_cnt = 0
         self.total = 0
 
-        if self.mapping:
+        if self.do_mapping:
             self.mapping_file = open('mapping.txt', 'w')
 
         self.export()
 
-        if self.stats:
-            print 'Total concepts processed %d' % self.total
-            print 'Q & A processed %d' % self.q_and_a_cnt
-            print 'Concept sets processed %d' % self.concept_set_cnt
+        # print 'Total concepts processed %d' % self.total
+        # print 'Q & A processed %d' % self.q_and_a_cnt
+        # print 'Concept sets processed %d' % self.concept_set_cnt
