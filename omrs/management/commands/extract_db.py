@@ -14,10 +14,9 @@
 
 """
 from optparse import make_option
-import os.path
 import json
 
-from django.core.management import BaseCommand, CommandError
+from django.core.management import BaseCommand
 
 from omrs.models import Concept, ConceptName, ConceptReferenceMap
 
@@ -27,35 +26,36 @@ def add_f(dictionary, key, value):
         dictionary[key] = value
 
 source_directory = [
-    ('IHTSDO','SNOMED-CT'),
-    ('IHTSDO','SNOMED-NP'),
-    ('WHO','ICD-10-WHO'),
-    ('NLM','RxNORM,RxNORM'),
-    ('NLM','RxNORM-Comb'),
-    ('Regenstrief','LOINC'),
-    ('WHO','ICD-10-WHO-NP'),
-    ('WHO','ICD-10-WHO-2nd'),
-    ('WHO','ICD-10-WHO-NP2'),
-    ('HL7','HL-7-CVX'),
-    ('PIH','PIH'),
-    ('PIH','PIH-Malawi'),
-    ('AMPATH','AMPATH'),
-    ('Columbia','SNOMED-MVP'),
-    ('OpenMRS','org.openmrs.module.mdrtb'),
-    ('MVP','MVP-Amazon-Server-174'),
-    ('IHTSDO','SNOMED-US'),
-    ('HL7','HL7-2.x-Route-of-Administration'),
-    ('3BT','3BT'),
-    ('WICC','ICPC2'),
-    ('Columbia','CIEL'),
-    ('CCAM','CCAM'),
-    ('OpenMRS','org.openmrs.module.emrapi,'),
-    ('IMO','IMO-ProblemIT'),
-    ('IMO','IMO-ProcedureIT'),
-    ('VHA','NDF-RT-NUI'),
-    ('FDA','FDA-Route-of-Administration'),
-    ('NCI','NCI-Concept-Code'),
+    ('IHTSDO', 'SNOMED-CT'),
+    ('IHTSDO', 'SNOMED-NP'),
+    ('WHO', 'ICD-10-WHO'),
+    ('NLM', 'RxNORM'),
+    ('NLM', 'RxNORM-Comb'),
+    ('Regenstrief', 'LOINC'),
+    ('WHO', 'ICD-10-WHO-NP'),
+    ('WHO', 'ICD-10-WHO-2nd'),
+    ('WHO', 'ICD-10-WHO-NP2'),
+    ('HL7', 'HL-7-CVX'),
+    ('PIH', 'PIH'),
+    ('PIH', 'PIH-Malawi'),
+    ('AMPATH', 'AMPATH'),
+    ('Columbia', 'SNOMED-MVP'),
+    ('OpenMRS', 'org.openmrs.module.mdrtb'),
+    ('MVP', 'MVP-Amazon-Server-174'),
+    ('IHTSDO', 'SNOMED-US'),
+    ('HL7', 'HL7-2.x-Route-of-Administration'),
+    ('3BT', '3BT'),
+    ('WICC', 'ICPC2'),
+    ('Columbia', 'CIEL'),
+    ('CCAM', 'CCAM'),
+    ('OpenMRS', 'org.openmrs.module.emrapi'),
+    ('IMO', 'IMO-ProblemIT'),
+    ('IMO', 'IMO-ProcedureIT'),
+    ('VHA', 'NDF-RT-NUI'),
+    ('FDA', 'FDA-Route-of-Administration'),
+    ('NCI', 'NCI-Concept-Code'),
 ]
+
 
 class Command(BaseCommand):
     help = 'Extract concepts from OpenMRS database in the form of json'
@@ -156,29 +156,23 @@ class Command(BaseCommand):
         # 'concept_set, [source_id, dest_ids+]'
         if c.conceptset_set.count() > 0:
             self.concept_set_cnt += 1
-            ids = [str(c.concept_id)]
+
             for sc in c.conceptset_set.all():
-                ids.append(str(sc.concept.concept_id))
-            if self.do_mapping:
-                self.mapping_file.write('concept_set ')
-                self.mapping_file.write(' '.join(ids))
-                self.mapping_file.write('\n')
+                if self.do_mapping:
+                    self.internal_mapping('CONCEPT-SET', None,
+                                          c, sc.concept.concept_id)
 
         # handle Q&A
         if c.question_answer.count() > 0:
             self.q_and_a_cnt += 1
 
-            ids = [str(c.concept_id)]
-
             # this is a question for a Q&A set
             for ans in c.question_answer.all():
-                pass
-                # print ans.answer_concept
-                ids.append(str(ans.answer_concept.concept_id))
-            if self.do_mapping:
-                self.mapping_file.write('q_and_a ')
-                self.mapping_file.write(' '.join(ids))
-                self.mapping_file.write('\n')
+
+                if self.do_mapping:
+                    self.internal_mapping('Q-AND-A', None,
+                                          c, ans.answer_concept.concept_id)
+
         data['extras'] = extras
         return data
 
@@ -219,37 +213,60 @@ class Command(BaseCommand):
             self.mapping_file.write(json.dumps(data, indent=4))
         self.mapping_file.write('\n')
 
+    def internal_mapping(self, map_type, external_id, concept, to_code):
+        """
+        """
+        data = {}
+        data['map_type'] = map_type
+        data['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
+            self.org_id, self.source_id, concept.concept_id)
+
+        if external_id is not None:
+            data['external_id'] = external_id
+        data['to_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
+            self.org_id, self.source_id, to_code)
+
+        self.write_mapping(data)
+
     def handle_mapping(self, concept):
         """
         """
         for r in concept.conceptreferencemap_set.all():
-            fields = [r.map_type.name,
-                      r.concept_reference_term.code,
-                      r.concept_reference_term.concept_source.name]
 
             data = {}
             data['map_type'] = r.map_type.name
             data['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
                 self.org_id, self.source_id, concept.concept_id)
 
+            data['external_id'] = r.concept_reference_term.uuid
 
             if r.concept_reference_term.concept_source.name == 'CIEL':
-                data['to_concept_url'] ='/orgs/%s/sources/%s/concepts/%s/' % (
-                self.org_id, self.source_id, r.concept_reference_term.code)
+
+                # internal
+                if str(concept.concept_id) == r.concept_reference_term.code:
+                    # mapping to myself
+                    continue
+
+                self.internal_mapping(r.map_type.name,
+                                      r.concept_reference_term.uuid,
+                                      concept, r.concept_reference_term.code
+                                      )
+                return
+
             else:
                 # external
                 to_source_id = r.concept_reference_term.concept_source.name
                 to_source_id = to_source_id.replace(' ', '-')
 
                 to_org_id = None
-                for o,s in source_directory:
+                for o, s in source_directory:
                     if s == to_source_id:
                         to_org_id = o
                 if to_org_id is None:
                     print 'Source %s not found in list.' % to_source_id
                     return
 
-                data['to_source_url'] ='/orgs/%s/sources/%s/' % (
+                data['to_source_url'] = '/orgs/%s/sources/%s/' % (
                     to_org_id, to_source_id)
 
                 data['to_concept_code'] = r.concept_reference_term.code
@@ -257,10 +274,6 @@ class Command(BaseCommand):
                     data['to_concept_name'] = r.concept_reference_term.name
 
             self.write_mapping(data)
-
-#            self.mapping_file.write('internal %s ' % concept.concept_id)
-#            self.mapping_file.write(','.join(fields))
-#            self.mapping_file.write('\n')
 
     def handle(self, *args, **options):
         self.concept_id = options['concept_id']
