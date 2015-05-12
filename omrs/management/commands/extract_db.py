@@ -85,6 +85,11 @@ class Command(BaseCommand):
                     dest='raw',
                     default=False,
                     help='Format json output in raw mode for import.'),
+        make_option('--retire',
+                    action='store_true',
+                    dest='retire_sw',
+                    default=False,
+                    help='If specify, output a list of retired concepts.'),
     )
 
     def export_concept(self, c):
@@ -114,6 +119,7 @@ class Command(BaseCommand):
                 'name_type': n.concept_name_type,
                 'locale': n.locale,
                 'locale_preferred': n.locale_preferred,
+                'external_id': n.uuid,
             })
         data['names'] = names
 
@@ -178,7 +184,8 @@ class Command(BaseCommand):
 
     def export(self):
         """
-
+            Main loop to process all export, loop thru all concepts and
+            export concept and mappings.
         """
         if self.concept_id is not None:
             # just do one export
@@ -187,11 +194,10 @@ class Command(BaseCommand):
             print json.dumps(data, indent=4)
             return
 
-        # for n, c in enumerate(Concept.objects.filter(question_answer__isnull=False)):
-        for n, c in enumerate(Concept.objects.all()):
-
-            if self.count is not None and n >= self.count:
-                break
+        q = Concept.objects.all()
+        if self.count is not None:
+            q = q.filter(concept_id__lte=self.count)
+        for n, c in enumerate(q):
 
             data = self.export_concept(c)
 
@@ -216,6 +222,9 @@ class Command(BaseCommand):
     def internal_mapping(self, map_type, external_id, concept, to_code):
         """
         """
+        if self.count is not None and concept.concept_id > self.count:
+                return
+
         data = {}
         data['map_type'] = map_type
         data['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
@@ -238,7 +247,7 @@ class Command(BaseCommand):
             data['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
                 self.org_id, self.source_id, concept.concept_id)
 
-            data['external_id'] = r.concept_reference_term.uuid
+            data['external_id'] = r.uuid
 
             if r.concept_reference_term.concept_source.name == 'CIEL':
 
@@ -266,6 +275,10 @@ class Command(BaseCommand):
                     print 'Source %s not found in list.' % to_source_id
                     return
 
+                # TODO
+                if to_org_id == 'Columbia':
+                    to_org_id = 'CIEL'
+
                 data['to_source_url'] = '/orgs/%s/sources/%s/' % (
                     to_org_id, to_source_id)
 
@@ -275,15 +288,27 @@ class Command(BaseCommand):
 
             self.write_mapping(data)
 
+    def retire_only(self):
+        """
+            Just create retire concept list.
+        """
+        q = Concept.objects.all()
+        if self.count is not None:
+            q = q.filter(concept_id__lte=self.count)
+
+            if c.retired:
+                print c.concept_id
+
     def handle(self, *args, **options):
         self.concept_id = options['concept_id']
         self.count = options['count']
         self.raw = options['raw']
         self.do_mapping = options['mapping']
         self.do_concept = options['concept']
+        self.do_retire = options['retire_sw']
 
-        self.org_id = 'CIELTEST'
-        self.source_id = 'CIELTEST'
+        self.org_id = 'CIEL'
+        self.source_id = 'CIEL'
 
         if self.count is not None:
             self.count = int(self.count)
@@ -291,6 +316,10 @@ class Command(BaseCommand):
         self.q_and_a_cnt = 0
         self.concept_set_cnt = 0
         self.total = 0
+
+        if self.do_retire:
+            self.retire_only()
+            return
 
         if self.do_mapping:
             self.mapping_file = open('mapping.txt', 'w')
