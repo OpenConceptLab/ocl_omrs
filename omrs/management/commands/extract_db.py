@@ -284,6 +284,8 @@ class Command(BaseCommand):
         data['concept_class'] = concept.concept_class.name
         data['datatype'] = concept.datatype.name
         data['external_id'] = concept.uuid
+        data['retired'] = concept.retired
+        add_f(extras, 'is_set', concept.is_set)
 
         # Concept Names
         names = []
@@ -319,6 +321,7 @@ class Command(BaseCommand):
             add_f(extras_dict, 'low_normal', numeric_metadata.low_normal)
             add_f(extras_dict, 'units', numeric_metadata.units)
             add_f(extras_dict, 'precise', numeric_metadata.precise)
+            add_f(extras_dict, 'display_precision', numeric_metadata.display_precision)
             extras.update(extras_dict)
 
         # TODO: Set additional concept extras

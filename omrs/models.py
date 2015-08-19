@@ -14,7 +14,6 @@ from django.db import models
 
 class Concept(models.Model):
     concept_id = models.IntegerField(primary_key=True)
-#    retired = models.IntegerField()
     retired = models.BooleanField()
     short_name = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
@@ -212,6 +211,7 @@ class ConceptNumeric(models.Model):
     low_normal = models.FloatField(blank=True, null=True)
     units = models.CharField(max_length=50, blank=True)
     precise = models.IntegerField()
+    display_precision = models.IntegerField()
     class Meta:
         managed = False
         db_table = 'concept_numeric'
