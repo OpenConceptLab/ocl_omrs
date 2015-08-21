@@ -1,20 +1,31 @@
 """
-Command to create JSON for importing OpenMRS CIEL concept dictionary into OCL.
+Command to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
 
-Normally run this command to do full export, output to stdout:
+Separate files should be created for concepts, mappings, and retired concept IDs,
+using commands such as:
 
-    manage.py extract_db --raw
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concepts > concepts.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --mappings > mappings.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --retired > retired_concepts.json
 
-In addition if you need to create inputs to mapping import, use the --mapping argument,
-the mapping data will always write to a file called mapping.txt
+The 'raw' option indicates that JSON should be formatted one record per line instead of
+human-readable format.
 
-    manage.py extract_db --mapping
+Set verbosity to 0 (e.g. '-v0') to suppress the results summary output. Set verbosity to 2
+to see all debug output.
+
+The OCL-CIEL test data set uses --concept_limit=2000:
+
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --concepts > c2k.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --mappings > m2k.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --retired > r2k.json
 
 NOTES:
 - OCL does not handle the OpenMRS drug table -- it is ignored for now
 
 BUGS:
-- 'concept_limit' parameter simply uses the CIEL concept_id rather than the actual concept count
+- 'concept_limit' parameter simply uses the CIEL concept_id rather than the actual
+   concept count, which means it only works for sequential numeric ID systems
 
 """
 from optparse import make_option
@@ -76,18 +87,18 @@ class Command(BaseCommand):
                     action='store',
                     dest='concept_id',
                     default=None,
-                    help='Database id for concept, if specified only export this one. e.g. 5839'),
+                    help='ID for concept to export, if specified only export this one. e.g. 5839'),
         make_option('--concept_limit',
                     action='store',
                     dest='concept_limit',
                     default=None,
                     help='Use to limit the number of concepts exported. Useful for testing.'),
-        make_option('--mapping',
+        make_option('--mappings',
                     action='store_true',
                     dest='mapping',
                     default=False,
                     help='Create mapping input file.'),
-        make_option('--concept',
+        make_option('--concepts',
                     action='store_true',
                     dest='concept',
                     default=False,
@@ -97,7 +108,7 @@ class Command(BaseCommand):
                     dest='raw',
                     default=False,
                     help='Format JSON for import, otherwise format for display.'),
-        make_option('--retire',
+        make_option('--retired',
                     action='store_true',
                     dest='retire_sw',
                     default=False,
