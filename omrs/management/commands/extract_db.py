@@ -30,9 +30,13 @@ BUGS:
 """
 from optparse import make_option
 import json
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 from omrs.models import Concept, ConceptName, ConceptReferenceMap
 
+
+class UnrecognizedSourceException(Exception):
+    """ UnrecognizedSourceException """
+    pass
 
 
 ## CONSTANTS
@@ -43,6 +47,7 @@ CIEL_ORG_NAME = 'Columbia'
 MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
 MAP_TYPE_Q_AND_A = 'Q-AND-A'
 
+# Directory of sources: ([owner-id], [source-id])
 SOURCE_DIRECTORY = [
     ('IHTSDO', 'SNOMED-CT'),
     ('IHTSDO', 'SNOMED-NP'),
@@ -72,6 +77,8 @@ SOURCE_DIRECTORY = [
     ('VHA', 'NDF-RT-NUI'),
     ('FDA', 'FDA-Route-of-Administration'),
     ('NCI', 'NCI-Concept-Code'),
+    ('HL7', 'HL7-DiagnosticReportStatus'),
+    ('HL7', 'HL7-DiagnosticServiceSections'),
 ]
 
 
@@ -154,7 +161,9 @@ class Command(BaseCommand):
 
         # Validate the options
         if not self.validate_options():
-            return False
+            raise CommandError(("ERROR: 'org_id' and 'source_id' are required options for a concept or "
+                   "mapping export and must be valid identifiers for an organization and "
+                   "source in OCL"))
 
         # Determine if an export request
         self.do_export = False
@@ -190,11 +199,7 @@ class Command(BaseCommand):
         # TODO: Check that org and source IDs are valid mnemonics
         # TODO: Check that specified org and source IDs exist in OCL
         if (self.do_mapping or self.do_concept) and (not self.org_id or not self.source_id):
-            print ("ERROR: 'org_id' and 'source_id' are required options for a concept or "
-                   "mapping export and must be valid identifiers for an organization and "
-                   "source in OCL")
             return False
-
         return True
 
     def print_debug_summary(self):
@@ -296,18 +301,20 @@ class Command(BaseCommand):
         data['datatype'] = concept.datatype.name
         data['external_id'] = concept.uuid
         data['retired'] = concept.retired
-        add_f(extras, 'is_set', concept.is_set)
+        if concept.is_set:
+            extras['is_set'] = concept.is_set
 
         # Concept Names
         names = []
         for concept_name in concept.conceptname_set.all():
-            names.append({
-                'name': concept_name.name,
-                'name_type': concept_name.concept_name_type,
-                'locale': concept_name.locale,
-                'locale_preferred': concept_name.locale_preferred,
-                'external_id': concept_name.uuid,
-            })
+            if not concept_name.voided:
+                names.append({
+                    'name': concept_name.name,
+                    'name_type': concept_name.concept_name_type,
+                    'locale': concept_name.locale,
+                    'locale_preferred': concept_name.locale_preferred,
+                    'external_id': concept_name.uuid,
+                })
         data['names'] = names
 
         # Concept Descriptions
@@ -354,11 +361,24 @@ class Command(BaseCommand):
         :returns: List of OCL-formatted mapping dictionaries for the concept.
         """
         maps = []
-        maps += self.export_concept_mappings(concept)
+
+        # Import OpenMRS mappings
+        new_maps = self.export_concept_mappings(concept)
+        if new_maps:
+            maps += new_maps
+
+        # Import OpenMRS Q&A
         if export_qanda:
-            maps += self.export_concept_qanda(concept)
+            new_maps = self.export_concept_qanda(concept)
+            if new_maps:
+                maps += new_maps
+
+        # Import OpenMRS Concept Set Members
         if export_set_members:
-            maps += self.export_concept_set_members(concept)
+            new_maps = self.export_concept_set_members(concept)
+            if new_maps:
+                maps += new_maps
+
         return maps
 
     def export_concept_mappings(self, concept):
@@ -398,8 +418,7 @@ class Command(BaseCommand):
                     if temp_source_id == to_source_id:
                         to_org_id = temp_org_id
                 if to_org_id is None:
-                    print 'Source %s not found in list.' % to_source_id
-                    return
+                    raise UnrecognizedSourceException('Source %s not found in list.' % to_source_id)
                 if to_org_id == CIEL_ORG_NAME:
                     # NOTE: OMRS defines external CIEL maps as owned by 'Columbia',
                     #       so need to convert to same nomenclature
@@ -475,7 +494,8 @@ class Command(BaseCommand):
         return maps
 
     def generate_internal_mapping(self, map_type=None, from_concept=None,
-                                  to_concept_code=None, external_id=None):
+                                  to_concept_code=None, external_id=None,
+                                  retired=False):
         """ Generate OCL-formatted dictionary for an internal mapping based on passed params. """
         map_dict = {}
         map_dict['map_type'] = map_type
@@ -483,13 +503,14 @@ class Command(BaseCommand):
             self.org_id, self.source_id, from_concept.concept_id)
         map_dict['to_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
             self.org_id, self.source_id, to_concept_code)
+        map_dict['retired'] = bool(retired)
         add_f(map_dict, 'external_id', external_id)
         return map_dict
 
     def generate_external_mapping(self, map_type=None, from_concept=None,
                                   to_org_id=None, to_source_id=None,
                                   to_concept_code=None, to_concept_name=None,
-                                  external_id=None):
+                                  external_id=None, retired=False):
         """ Generate OCL-formatted dictionary for an external mapping based on passed params. """
         map_dict = {}
         map_dict['map_type'] = map_type
@@ -497,6 +518,7 @@ class Command(BaseCommand):
             self.org_id, self.source_id, from_concept.concept_id)
         map_dict['to_source_url'] = '/orgs/%s/sources/%s/' % (to_org_id, to_source_id)
         map_dict['to_concept_code'] = to_concept_code
+        map_dict['retired'] = bool(retired)
         add_f(map_dict, 'to_concept_name', to_concept_name)
         add_f(map_dict, 'external_id', external_id)
         return map_dict

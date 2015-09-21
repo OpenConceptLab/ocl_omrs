@@ -162,7 +162,7 @@ class ConceptName(models.Model):
     creator = models.IntegerField()
     date_created = models.DateTimeField()
     concept_name_id = models.IntegerField(unique=True, primary_key=True)
-    voided = models.IntegerField()
+    voided = models.BooleanField()
     voided_by = models.IntegerField(blank=True, null=True)
     date_voided = models.DateTimeField(blank=True, null=True)
     void_reason = models.CharField(max_length=255, blank=True)
