@@ -1,15 +1,21 @@
 """
 Command to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
 
-Separate files should be created for concepts, mappings, and retired concept IDs,
-using commands such as:
+Separate files should be created for concepts and mappings, for example:
 
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concepts > concepts.json
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --mappings > mappings.json
+
+The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
+instead of human-readable format.
+
+It is also possible to create a list of retired concept IDs (this is not used during import):
+
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --retired > retired_concepts.json
 
-The 'raw' option indicates that JSON should be formatted one record per line instead of
-human-readable format.
+You should validate reference sources before generating the export with the "check_sources" option:
+
+    manage.py extract_db --check_sources --env=... --token=...
 
 Set verbosity to 0 (e.g. '-v0') to suppress the results summary output. Set verbosity to 2
 to see all debug output.
@@ -31,55 +37,13 @@ BUGS:
 from optparse import make_option
 import json
 from django.core.management import BaseCommand, CommandError
-from omrs.models import Concept, ConceptName, ConceptReferenceMap
+from omrs.models import Concept, ConceptName, ConceptReferenceMap, ConceptReferenceSource
+import requests
 
 
 class UnrecognizedSourceException(Exception):
     """ UnrecognizedSourceException """
     pass
-
-
-## CONSTANTS
-
-CIEL_ORG_ID = 'CIEL'
-CIEL_ORG_NAME = 'Columbia'
-
-MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
-MAP_TYPE_Q_AND_A = 'Q-AND-A'
-
-# Directory of sources: ([owner-id], [source-id])
-SOURCE_DIRECTORY = [
-    ('IHTSDO', 'SNOMED-CT'),
-    ('IHTSDO', 'SNOMED-NP'),
-    ('WHO', 'ICD-10-WHO'),
-    ('NLM', 'RxNORM'),
-    ('NLM', 'RxNORM-Comb'),
-    ('Regenstrief', 'LOINC'),
-    ('WHO', 'ICD-10-WHO-NP'),
-    ('WHO', 'ICD-10-WHO-2nd'),
-    ('WHO', 'ICD-10-WHO-NP2'),
-    ('HL7', 'HL-7-CVX'),
-    ('PIH', 'PIH'),
-    ('PIH', 'PIH-Malawi'),
-    ('AMPATH', 'AMPATH'),
-    ('Columbia', 'SNOMED-MVP'),
-    ('OpenMRS', 'org.openmrs.module.mdrtb'),
-    ('MVP', 'MVP-Amazon-Server-174'),
-    ('IHTSDO', 'SNOMED-US'),
-    ('HL7', 'HL7-2.x-Route-of-Administration'),
-    ('3BT', '3BT'),
-    ('WICC', 'ICPC2'),
-    ('Columbia', 'CIEL'),
-    ('CCAM', 'CCAM'),
-    ('OpenMRS', 'org.openmrs.module.emrapi'),
-    ('IMO', 'IMO-ProblemIT'),
-    ('IMO', 'IMO-ProcedureIT'),
-    ('VHA', 'NDF-RT-NUI'),
-    ('FDA', 'FDA-Route-of-Administration'),
-    ('NCI', 'NCI-Concept-Code'),
-    ('HL7', 'HL7-DiagnosticReportStatus'),
-    ('HL7', 'HL7-DiagnosticServiceSections'),
-]
 
 
 
@@ -88,6 +52,46 @@ class Command(BaseCommand):
     Extract concepts from OpenMRS database in the form of json
     """
 
+    ## CONSTANTS
+    MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
+    MAP_TYPE_Q_AND_A = 'Q-AND-A'
+
+    # Directory of organizations and each of their sources
+    SOURCE_DIRECTORY = [
+        ('IHTSDO', 'SNOMED-CT'),
+        ('IHTSDO', 'SNOMED-NP'),
+        ('WHO', 'ICD-10-WHO'),
+        ('NLM', 'RxNORM'),
+        ('NLM', 'RxNORM-Comb'),
+        ('Regenstrief', 'LOINC'),
+        ('WHO', 'ICD-10-WHO-NP'),
+        ('WHO', 'ICD-10-WHO-2nd'),
+        ('WHO', 'ICD-10-WHO-NP2'),
+        ('HL7', 'HL-7-CVX'),
+        ('PIH', 'PIH'),
+        ('PIH', 'PIH-Malawi'),
+        ('AMPATH', 'AMPATH'),
+        ('CIEL', 'SNOMED-MVP'),
+        ('OpenMRS', 'org.openmrs.module.mdrtb'),
+        ('MVP', 'MVP-Amazon-Server-174'),
+        ('IHTSDO', 'SNOMED-US'),
+        ('HL7', 'HL7-2.x-Route-of-Administration'),
+        ('3BT', '3BT'),
+        ('WICC', 'ICPC2'),
+        ('CIEL', 'CIEL'),
+        ('CCAM', 'CCAM'),
+        ('OpenMRS', 'org.openmrs.module.emrapi'),
+        ('IMO', 'IMO-ProblemIT'),
+        ('IMO', 'IMO-ProcedureIT'),
+        ('WHO', 'Pharmacologic-Drug-Class'),
+        ('VHA', 'NDF-RT-NUI'),
+        ('FDA', 'FDA-Route-of-Administration'),
+        ('NCI', 'NCI-Concept-Code'),
+        ('HL7', 'HL7-DiagnosticReportStatus'),
+        ('HL7', 'HL7-DiagnosticServiceSections'),
+    ]
+
+    # Command attributes
     help = 'Extract concepts from OpenMRS database in the form of json'
     option_list = BaseCommand.option_list + (
         make_option('--concept_id',
@@ -130,7 +134,28 @@ class Command(BaseCommand):
                     dest='source_id',
                     default=None,
                     help='source_id of dictionary being imported (e.g. ICD-10-WHO)'),
+        make_option('--check_sources',
+                    action='store_true',
+                    dest='check_sources',
+                    default=False,
+                    help='Validates that all reference sources in OpenMRS have been defined in OCL.'),
+        make_option('--env',
+                    action='store',
+                    dest='ocl_api_env',
+                    default='production',
+                    help='Set the target for reference source validation to "dev", "staging", or "production"'),
+        make_option('--token',
+                    action='store',
+                    dest='token',
+                    default=None,
+                    help='OCL API token to validate OpenMRS reference sources'),
     )
+
+    OCL_API_URL = {
+        'dev': 'http://api.dev.openconceptlab.com/',
+        'staging': 'http://api.staging.openconceptlab.com/',
+        'production': 'http://api.openconceptlab.com/',
+    }
 
 
 
@@ -154,16 +179,20 @@ class Command(BaseCommand):
         if self.concept_limit is not None:
             self.concept_limit = int(self.concept_limit)
         self.verbosity = int(options['verbosity'])
+        self.ocl_api_token = options['token']
+        if options['ocl_api_env']:
+            self.ocl_api_env = options['ocl_api_env'].lower()
 
         # Option debug output
         if self.verbosity >= 2:
             print 'COMMAND LINE OPTIONS:', options
 
         # Validate the options
-        if not self.validate_options():
-            raise CommandError(("ERROR: 'org_id' and 'source_id' are required options for a concept or "
-                   "mapping export and must be valid identifiers for an organization and "
-                   "source in OCL"))
+        self.validate_options()
+
+        # Validate all reference sources
+        if options['check_sources']:
+            self.check_sources()
 
         # Determine if an export request
         self.do_export = False
@@ -199,7 +228,12 @@ class Command(BaseCommand):
         # TODO: Check that org and source IDs are valid mnemonics
         # TODO: Check that specified org and source IDs exist in OCL
         if (self.do_mapping or self.do_concept) and (not self.org_id or not self.source_id):
-            return False
+            raise CommandError(
+                ("ERROR: 'org_id' and 'source_id' are required options for a concept or "
+                 "mapping export and must be valid identifiers for an organization and "
+                 "source in OCL"))
+        if not (self.ocl_api_env in self.OCL_API_URL):
+            raise CommandError('Invalid "env" option provided: %s' % self.ocl_api_env)
         return True
 
     def print_debug_summary(self):
@@ -228,6 +262,42 @@ class Command(BaseCommand):
 
 
 
+    ## REFERENCE SOURCE VALIDATOR
+
+    def check_sources(self):
+        """ Validates that all reference sources in OpenMRS have been defined in OCL. """
+        url_base = self.OCL_API_URL[self.ocl_api_env]
+        headers = {'Authorization': 'Token %s' % self.ocl_api_token}
+        reference_sources = ConceptReferenceSource.objects.all()
+        reference_sources = reference_sources.filter(retired=0)
+        enum_reference_sources = enumerate(reference_sources)
+        for num, source in enum_reference_sources:
+            source_id = source.name.replace(' ', '-')
+            if self.verbosity >= 1:
+                print 'Checking source "%s"' % source_id
+
+            # Check that source exists in the source directory (which maps sources to orgs)
+            org_id = Command.get_source_owner_id(source_id)
+            if org_id is None:
+                raise UnrecognizedSourceException('Source %s not found in source directory.' % source_id)
+            if self.verbosity >= 1:
+                print '...found owner "%s" in Source Directory' % org_id
+
+            # Check that org:source exists in OCL
+            if self.ocl_api_token:
+                url = url_base + 'orgs/%s/sources/%s/' % (org_id, source_id)
+                r = requests.head(url, headers=headers)
+                if r.status_code != requests.codes.OK:
+                    raise UnrecognizedSourceException('%s not found in OCL.' % url)
+                if self.verbosity >= 1:
+                    print '...found %s in OCL' % url
+            elif self.verbosity >= 1:
+                print '...no api token provided, skipping check on OCL.'
+
+        return True
+
+
+
     ## MAIN EXPORT LOOP
 
     def export(self):
@@ -238,7 +308,7 @@ class Command(BaseCommand):
         Note that the retired status of concepts is not handled here.
         """
 
-        # Determine JSON indent value
+        # Set JSON indent value
         output_indent = 4
         if self.raw:
             output_indent = None
@@ -413,16 +483,9 @@ class Command(BaseCommand):
                 to_source_id = to_source_id.replace(' ', '-')
 
                 # Prepare to_org_id
-                to_org_id = None
-                for temp_org_id, temp_source_id in SOURCE_DIRECTORY:
-                    if temp_source_id == to_source_id:
-                        to_org_id = temp_org_id
+                to_org_id = Command.get_source_owner_id(to_source_id)
                 if to_org_id is None:
-                    raise UnrecognizedSourceException('Source %s not found in list.' % to_source_id)
-                if to_org_id == CIEL_ORG_NAME:
-                    # NOTE: OMRS defines external CIEL maps as owned by 'Columbia',
-                    #       so need to convert to same nomenclature
-                    to_org_id = CIEL_ORG_ID
+                    raise UnrecognizedSourceException('Source %s not found in source directory.' % to_source_id)
 
                 # Generate the external mapping dictionary
                 map_dict = self.generate_external_mapping(
@@ -458,7 +521,7 @@ class Command(BaseCommand):
         maps = []
         for answer in concept.question_answer.all():
             map_dict = self.generate_internal_mapping(
-                map_type=MAP_TYPE_Q_AND_A,
+                map_type=self.MAP_TYPE_Q_AND_A,
                 from_concept=concept,
                 to_concept_code=answer.answer_concept.concept_id,
                 external_id=answer.uuid)
@@ -484,7 +547,7 @@ class Command(BaseCommand):
         maps = []
         for set_member in concept.conceptset_set.all():
             map_dict = self.generate_internal_mapping(
-                map_type=MAP_TYPE_CONCEPT_SET,
+                map_type=self.MAP_TYPE_CONCEPT_SET,
                 from_concept=concept,
                 to_concept_code=set_member.concept.concept_id,
                 external_id=set_member.uuid)
@@ -532,6 +595,15 @@ class Command(BaseCommand):
         if concept.retired:
             self.cnt_retired_concepts_exported += 1
             return concept.concept_id
+        return None
+
+
+    @classmethod
+    def get_source_owner_id(cls, source_id):
+        """ Returns the owner ID for the specified source """
+        for temp_org_id, temp_source_id in cls.SOURCE_DIRECTORY:
+            if temp_source_id == source_id:
+                return temp_org_id
         return None
 
 
