@@ -47,11 +47,13 @@ class ConceptAnswer(models.Model):
 
     # answers for this concept
 #    concept_id = models.IntegerField()
-    question_concept = models.ForeignKey('Concept',
+    question_concept = models.ForeignKey(
+        'Concept',
         db_column='concept_id', related_name='question_answer')
 
 #    answer_concept = models.IntegerField(blank=True, null=True)
-    answer_concept = models.ForeignKey('Concept',
+    answer_concept = models.ForeignKey(
+        'Concept',
         db_column='answer_concept', related_name='answer')
 
     answer_drug = models.IntegerField(blank=True, null=True)
@@ -256,7 +258,8 @@ class ConceptReferenceMap(models.Model):
 #    concept_reference_term_id = models.IntegerField()
     concept_reference_term = models.ForeignKey('ConceptReferenceTerm')
 #    concept_map_type_id = models.IntegerField()
-    map_type = models.ForeignKey('ConceptMapType',
+    map_type = models.ForeignKey(
+        'ConceptMapType',
         db_column='concept_map_type_id')
     changed_by = models.IntegerField(blank=True, null=True)
     date_changed = models.DateTimeField(blank=True, null=True)
