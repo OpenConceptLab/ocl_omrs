@@ -43,11 +43,12 @@ WSGI_APPLICATION = 'omrs.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'openmrs_20150824',
+        #'NAME': 'openmrs_20150824',
+        'NAME': 'openmrs_20150514',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '3307',
     }
 }
 

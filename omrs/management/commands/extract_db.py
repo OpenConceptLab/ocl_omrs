@@ -37,13 +37,9 @@ BUGS:
 from optparse import make_option
 import json
 from django.core.management import BaseCommand, CommandError
-from omrs.models import Concept, ConceptName, ConceptReferenceMap, ConceptReferenceSource
+from omrs.models import Concept, ConceptReferenceSource
+from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceException
 import requests
-
-
-class UnrecognizedSourceException(Exception):
-    """ UnrecognizedSourceException """
-    pass
 
 
 
@@ -51,45 +47,6 @@ class Command(BaseCommand):
     """
     Extract concepts from OpenMRS database in the form of json
     """
-
-    ## CONSTANTS
-    MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
-    MAP_TYPE_Q_AND_A = 'Q-AND-A'
-
-    # Directory of organizations and each of their sources
-    SOURCE_DIRECTORY = [
-        ('IHTSDO', 'SNOMED-CT'),
-        ('IHTSDO', 'SNOMED-NP'),
-        ('WHO', 'ICD-10-WHO'),
-        ('NLM', 'RxNORM'),
-        ('NLM', 'RxNORM-Comb'),
-        ('Regenstrief', 'LOINC'),
-        ('WHO', 'ICD-10-WHO-NP'),
-        ('WHO', 'ICD-10-WHO-2nd'),
-        ('WHO', 'ICD-10-WHO-NP2'),
-        ('HL7', 'HL-7-CVX'),
-        ('PIH', 'PIH'),
-        ('PIH', 'PIH-Malawi'),
-        ('AMPATH', 'AMPATH'),
-        ('CIEL', 'SNOMED-MVP'),
-        ('OpenMRS', 'org.openmrs.module.mdrtb'),
-        ('MVP', 'MVP-Amazon-Server-174'),
-        ('IHTSDO', 'SNOMED-US'),
-        ('HL7', 'HL7-2.x-Route-of-Administration'),
-        ('3BT', '3BT'),
-        ('WICC', 'ICPC2'),
-        ('CIEL', 'CIEL'),
-        ('CCAM', 'CCAM'),
-        ('OpenMRS', 'org.openmrs.module.emrapi'),
-        ('IMO', 'IMO-ProblemIT'),
-        ('IMO', 'IMO-ProcedureIT'),
-        ('WHO', 'Pharmacologic-Drug-Class'),
-        ('VHA', 'NDF-RT-NUI'),
-        ('FDA', 'FDA-Route-of-Administration'),
-        ('NCI', 'NCI-Concept-Code'),
-        ('HL7', 'HL7-DiagnosticReportStatus'),
-        ('HL7', 'HL7-DiagnosticServiceSections'),
-    ]
 
     # Command attributes
     help = 'Extract concepts from OpenMRS database in the form of json'
@@ -232,7 +189,7 @@ class Command(BaseCommand):
                 ("ERROR: 'org_id' and 'source_id' are required options for a concept or "
                  "mapping export and must be valid identifiers for an organization and "
                  "source in OCL"))
-        if not (self.ocl_api_env in self.OCL_API_URL):
+        if self.ocl_api_env not in self.OCL_API_URL:
             raise CommandError('Invalid "env" option provided: %s' % self.ocl_api_env)
         return True
 
@@ -272,14 +229,12 @@ class Command(BaseCommand):
         reference_sources = reference_sources.filter(retired=0)
         enum_reference_sources = enumerate(reference_sources)
         for num, source in enum_reference_sources:
-            source_id = source.name.replace(' ', '-')
+            source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(source.name)
             if self.verbosity >= 1:
                 print 'Checking source "%s"' % source_id
 
             # Check that source exists in the source directory (which maps sources to orgs)
-            org_id = Command.get_source_owner_id(source_id)
-            if org_id is None:
-                raise UnrecognizedSourceException('Source %s not found in source directory.' % source_id)
+            org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=source_id)
             if self.verbosity >= 1:
                 print '...found owner "%s" in Source Directory' % org_id
 
@@ -479,13 +434,9 @@ class Command(BaseCommand):
             # External Mapping
             else:
                 # Prepare to_source_id
-                to_source_id = ref_map.concept_reference_term.concept_source.name
-                to_source_id = to_source_id.replace(' ', '-')
-
-                # Prepare to_org_id
-                to_org_id = Command.get_source_owner_id(to_source_id)
-                if to_org_id is None:
-                    raise UnrecognizedSourceException('Source %s not found in source directory.' % to_source_id)
+                omrs_to_source_id = ref_map.concept_reference_term.concept_source.name
+                to_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(omrs_to_source_id)
+                to_org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=to_source_id)
 
                 # Generate the external mapping dictionary
                 map_dict = self.generate_external_mapping(
@@ -521,7 +472,7 @@ class Command(BaseCommand):
         maps = []
         for answer in concept.question_answer.all():
             map_dict = self.generate_internal_mapping(
-                map_type=self.MAP_TYPE_Q_AND_A,
+                map_type=OclOpenmrsHelper.MAP_TYPE_Q_AND_A,
                 from_concept=concept,
                 to_concept_code=answer.answer_concept.concept_id,
                 external_id=answer.uuid)
@@ -547,7 +498,7 @@ class Command(BaseCommand):
         maps = []
         for set_member in concept.conceptset_set.all():
             map_dict = self.generate_internal_mapping(
-                map_type=self.MAP_TYPE_CONCEPT_SET,
+                map_type=OclOpenmrsHelper.MAP_TYPE_CONCEPT_SET,
                 from_concept=concept,
                 to_concept_code=set_member.concept.concept_id,
                 external_id=set_member.uuid)
@@ -595,15 +546,6 @@ class Command(BaseCommand):
         if concept.retired:
             self.cnt_retired_concepts_exported += 1
             return concept.concept_id
-        return None
-
-
-    @classmethod
-    def get_source_owner_id(cls, source_id):
-        """ Returns the owner ID for the specified source """
-        for temp_org_id, temp_source_id in cls.SOURCE_DIRECTORY:
-            if temp_source_id == source_id:
-                return temp_org_id
         return None
 
 
