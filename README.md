@@ -1,4 +1,19 @@
-# OpenMRS Database Extract/Export
+# ocl_omrs
+
+This django project has scripts that make it easier to work with OCL and OpenMRS:
+* **extract_db** generates JSON files from an OpenMRS v1.11 concept dictionary formatted for import into OCL
+* **validate_export** validates an OCL export file against an OpenMRS v1.11 concept dictionary
+
+## validate_export: OCL Export Validation
+
+Before running this, you must set the MySQL database settings in `omrs/settings.py`.
+
+Usage:
+```
+./manage.py validate_export --export=EXPORT_FILE_NAME [--ignore_retired_mappings] [-v[2]]
+```
+
+## extract_db: OpenMRS Database JSON Export
 
 This django project reads a OpenMRS database and extract the concept
 data for OCL. Typically you run this on a local machine with MySQL installed.
@@ -6,7 +21,7 @@ data for OCL. Typically you run this on a local machine with MySQL installed.
 See the [OpenMRS Website/wiki](https://wiki.openmrs.org/display/docs/Concept+Data+Model) for download of the raw SQL and
 data dictionary.
 
-# Configuration
+## Configuration
 
 Use this tool in a local environment after setting and loading the OpenMRS SQL file into a MySQL database.
 
