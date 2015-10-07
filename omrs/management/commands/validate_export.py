@@ -1,5 +1,8 @@
 """
 Command to validate an OCL source version export against an OpenMRS dictionary stored in Mysql.
+
+TODO: Implement "deep" comparison for both concepts and mappings -- start with checking only active status
+
 """
 import json
 from django.core.management import BaseCommand
@@ -25,6 +28,11 @@ class Command(BaseCommand):
                     dest='ocl_export_filename',
                     default=None,
                     help='OCL export filename'),
+        make_option('--ignore_retired_mappings',
+                    action='store_true',
+                    dest='ignore_retired_mappings',
+                    default=False,
+                    help='Retired mappings in OCL are not included in the comparison if set to True'),
     )
 
 
@@ -38,11 +46,12 @@ class Command(BaseCommand):
 
         # Get command line arguments
         self.ocl_export_filename = options['ocl_export_filename']
+        self.ignore_retired_mappings = options['ignore_retired_mappings']
         self.verbosity = int(options['verbosity'])
 
         # Option debug output
         if self.verbosity >= 2:
-            print 'COMMAND LINE OPTIONS:', options
+            print 'COMMAND LINE OPTIONS:\n', options
 
         # Load the OCL export file into memory
         # NOTE: This will only work if it can fit into memory -- explore streaming partial loads
@@ -62,9 +71,9 @@ class Command(BaseCommand):
         self.validate_mappings(data)
 
     def validate_concepts(self, data):
-        print 'VALIDATING CONCEPTS:\n'
 
         # Create an array of concept IDs that are in the mysql db
+        print '\nCONCEPT COUNT COMPARISON:'
         id_comparison = {
             self.MISSING_IN_OCL:{},
             self.MISSING_IN_MYSQL:{},
@@ -76,24 +85,31 @@ class Command(BaseCommand):
         # Perform count comparison
         count_ocl = len(data['concepts'])
         if count_ocl == count_mysql:
-            print 'Count comparison: OCL %s == MYSQL %s' % (count_ocl, count_mysql)
+            print 'Concept count comparison: OCL %s == MYSQL %s\n' % (count_ocl, count_mysql)
         else:
-            print 'Count comparison: OCL %s != MYSQL %s' % (count_ocl, count_mysql)
+            print 'Concept count comparison: OCL %s != MYSQL %s\n' % (count_ocl, count_mysql)
 
         # Perform an ID comparison
+        print '\nVALIDATING CONCEPTS:'
         cnt = 0
         for c_ocl in data['concepts']:
+            # Display progress bar
             cnt += 1
             if (cnt % 1000) == 1:
                 print 'Validating %s to %s of %s concepts...' % (cnt, cnt - 1 + 1000, count_ocl)
+
+            # Do the comparison
             if c_ocl['id'] in id_comparison[self.MISSING_IN_OCL]:
                 del id_comparison[self.MISSING_IN_OCL][c_ocl['id']]
             else:
                 id_comparison[self.MISSING_IN_MYSQL][c_ocl['id']] = 0
-                print 'Concept %s exists in OCL but is missing in Mysql: %s' % (c_ocl['id'], c_ocl)
-        print '%s concept IDs missing in OCL:\n' % len(id_comparison[self.MISSING_IN_OCL])
+                if self.verbosity >= 2: print 'Concept %s exists in OCL but is missing in Mysql: %s' % (c_ocl['id'], c_ocl)
+
+        # Output summary of results
+        print '\n\nCONCEPT VALIDATION SUMMARY:'
+        print '\n%s concept IDs missing in OCL:\n' % len(id_comparison[self.MISSING_IN_OCL])
         print id_comparison[self.MISSING_IN_OCL]
-        print '%s concept IDs missing in MySQL:\n' % len(id_comparison[self.MISSING_IN_MYSQL])
+        print '\n%s concept IDs missing in MySQL:\n' % len(id_comparison[self.MISSING_IN_MYSQL])
         print id_comparison[self.MISSING_IN_MYSQL]
 
         # For IDs missing in MySQL, check if they are duplicated in the export
@@ -103,7 +119,7 @@ class Command(BaseCommand):
                 if c_ocl['id'] in missing_ids:
                     missing_ids[c_ocl['id']] += 1
                     print c_ocl
-            print 'Checking for duplicate IDs in export:\n'
+            print '\nChecking for duplicate IDs in export:\n'
             num_duplicates = 0
             for c_id in missing_ids:
                 if missing_ids[c_id]:
@@ -113,7 +129,7 @@ class Command(BaseCommand):
                 print 'No duplicates found in export file\n'
 
         # Perform deep comparison
-        print 'Skipping deep comparison of concepts...\n'
+        print '\nSkipping deep comparison of concepts...\n'
 
         return
 
@@ -124,19 +140,23 @@ class Command(BaseCommand):
         and compares against the records in OCL.
         """
 
-        print 'VALIDATING MAPPINGS:\n'
-
-        # Count objects in JSON
-        cnt_ocl_mapref = cnt_ocl_qanda = cnt_ocl_conceptset = 0
+        # Count objects in OCL
+        print '\nMAPPING COUNT COMPARISON:'
+        cnt_ocl_mapref = cnt_ocl_qanda = cnt_ocl_conceptset = cnt_ocl_retired_maps = 0
         for m_ocl in data['mappings']:
             map_type = str(m_ocl['map_type'])
-            if map_type == OclOpenmrsHelper.MAP_TYPE_Q_AND_A:
-                cnt_ocl_qanda += 1
-            elif map_type == OclOpenmrsHelper.MAP_TYPE_CONCEPT_SET:
-                cnt_ocl_conceptset += 1
-            else:
-                cnt_ocl_mapref += 1
+            retired = m_ocl['retired']
+            if retired:
+                cnt_ocl_retired_maps += 1
+            if (retired and not self.ignore_retired_mappings) or not retired:
+                if map_type == OclOpenmrsHelper.MAP_TYPE_Q_AND_A:
+                    cnt_ocl_qanda += 1
+                elif map_type == OclOpenmrsHelper.MAP_TYPE_CONCEPT_SET:
+                    cnt_ocl_conceptset += 1
+                else:
+                    cnt_ocl_mapref += 1
         cnt_ocl_total = cnt_ocl_mapref + cnt_ocl_qanda + cnt_ocl_conceptset
+        cnt_ocl_total_with_retired = (cnt_ocl_total + cnt_ocl_retired_maps) if self.ignore_retired_mappings else cnt_ocl_total
 
         # Count objects in MySQL
         cnt_mysql_mapref = ConceptReferenceMap.objects.exclude(concept_reference_term__concept_source__name='CIEL').count()
@@ -145,6 +165,15 @@ class Command(BaseCommand):
         cnt_mysql_total = cnt_mysql_mapref + cnt_mysql_qanda + cnt_mysql_conceptset
 
         # Count comparison
+        print '%s total mappings in OCL Export file, including %s retired mappings.' % (cnt_ocl_total_with_retired, cnt_ocl_retired_maps)
+        if self.ignore_retired_mappings:
+            print '%s active mappings used in the comparison ("ignore_retired_mappings" flag set)' % cnt_ocl_total
+        else:
+            print 'Both active and inactive mappings used in the comparison (set "ignore_retired_mappings" flag to exclude retired mappings)'
+        if cnt_ocl_total == cnt_mysql_total:
+            print 'Count comparison of all mappings: OCL %s == MYSQL %s' % (cnt_ocl_total, cnt_mysql_total)
+        else:
+            print 'Count comparison of all mappings: OCL %s != MYSQL %s' % (cnt_ocl_total, cnt_mysql_total)
         if cnt_ocl_mapref == cnt_mysql_mapref:
             print 'Count comparison of reference maps: OCL %s == MYSQL %s' % (cnt_ocl_mapref, cnt_mysql_mapref)
         else:
@@ -157,10 +186,6 @@ class Command(BaseCommand):
             print 'Count comparison of Concept Sets: OCL %s == MYSQL %s' % (cnt_ocl_conceptset, cnt_mysql_conceptset)
         else:
             print 'Count comparison of Concept Sets: OCL %s != MYSQL %s' % (cnt_ocl_conceptset, cnt_mysql_conceptset)
-        if cnt_ocl_total == cnt_mysql_total:
-            print 'Count comparison of all mappings: OCL %s == MYSQL %s' % (cnt_ocl_total, cnt_mysql_total)
-        else:
-            print 'Count comparison of all mappings: OCL %s != MYSQL %s' % (cnt_ocl_total, cnt_mysql_total)
 
         # Create an array of key comparison data from mappings in Mysql
         self.qanda_comparison = {
@@ -184,9 +209,14 @@ class Command(BaseCommand):
         for conceptset_mysql in ConceptSet.objects.raw('select concept_set_id from concept_set'):
             self.conceptset_comparison[self.MISSING_IN_OCL].append(conceptset_mysql.concept_set_id)
 
-        # Iterate through data and directly compare
+        # Iterate through OCL data and directly compare
+        print '\nVALIDATING MAPPINGS:'
         cnt = 0
         for m_ocl in data['mappings']:
+
+            # Skip retired mappings entirely if flag is set
+            if self.ignore_retired_mappings and m_ocl['retired']:
+                continue
 
             # Display progress info
             cnt += 1
@@ -217,18 +247,18 @@ class Command(BaseCommand):
                     if self.verbosity >= 2: print 'Missing reference map in MySQL: %s\n' % m_ocl
 
         # Display results of comparison
-        print 'MAPPING COMPARISON SUMMARY:\n\n'
+        print '\n\nMAPPING VALIDATION SUMMARY:'
         print '%s Q/A mapping(s) missing in OCL Export:\n' % len(self.qanda_comparison[self.MISSING_IN_OCL])
         if self.verbosity >= 1: print self.qanda_comparison[self.MISSING_IN_OCL]
-        print '%s Q/A mapping(s) missing in MySQL:\n' % len(self.qanda_comparison[self.MISSING_IN_MYSQL])
+        print '\n%s Q/A mapping(s) missing in MySQL:\n' % len(self.qanda_comparison[self.MISSING_IN_MYSQL])
         if self.verbosity >= 1: print self.qanda_comparison[self.MISSING_IN_MYSQL]
-        print '%s Concept Set(s) mappings missing in OCL Export:\n' % len(self.conceptset_comparison[self.MISSING_IN_OCL])
+        print '\n%s Concept Set(s) mappings missing in OCL Export:\n' % len(self.conceptset_comparison[self.MISSING_IN_OCL])
         if self.verbosity >= 1: print self.conceptset_comparison[self.MISSING_IN_OCL]
-        print '%s Concept Set(s) mappings missing in MySQL:\n' % len(self.conceptset_comparison[self.MISSING_IN_MYSQL])
+        print '\n%s Concept Set(s) mappings missing in MySQL:\n' % len(self.conceptset_comparison[self.MISSING_IN_MYSQL])
         if self.verbosity >= 1: print self.conceptset_comparison[self.MISSING_IN_MYSQL]
-        print '%s Reference Map(s) missing in OCL Export:\n' % len(self.refmap_comparison[self.MISSING_IN_OCL])
+        print '\n%s Reference Map(s) missing in OCL Export:\n' % len(self.refmap_comparison[self.MISSING_IN_OCL])
         if self.verbosity >= 1: print self.refmap_comparison[self.MISSING_IN_OCL]
-        print '%s Reference Map(s) missing in MySQL:\n' % len(self.refmap_comparison[self.MISSING_IN_MYSQL])
+        print '\n%s Reference Map(s) missing in MySQL:\n' % len(self.refmap_comparison[self.MISSING_IN_MYSQL])
         if self.verbosity >= 1: print self.refmap_comparison[self.MISSING_IN_MYSQL]
 
     def validate_reference_map(self, m_ocl):
