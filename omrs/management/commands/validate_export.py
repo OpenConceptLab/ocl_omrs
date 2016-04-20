@@ -275,7 +275,7 @@ class Command(BaseCommand):
         except ConceptReferenceMap.DoesNotExist:
             return False
         except ConceptReferenceMap.MultipleObjectsReturned:
-            print 'Multiple objects returned for reference mapping: %s\n' % m_ocl
+            print 'Multiple objects returned from MySQL for reference mapping: %s\n' % m_ocl
             return False
 
     def validate_qanda(self, m_ocl):

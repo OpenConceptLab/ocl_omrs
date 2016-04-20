@@ -236,7 +236,7 @@ class Command(BaseCommand):
             # Check that source exists in the source directory (which maps sources to orgs)
             org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=source_id)
             if self.verbosity >= 1:
-                print '...found owner "%s" in Source Directory' % org_id
+                print '...found owner "%s" in source directory' % org_id
 
             # Check that org:source exists in OCL
             if self.ocl_api_token:
