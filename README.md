@@ -29,34 +29,28 @@ Separate files should be created for concepts and mappings, for example:
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concepts > concepts.json
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --mappings > mappings.json
 
-The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
-instead of human-readable format.
+By default JSON is outputted in a human-readable format. Use the `raw` option to indicate that JSON should be formatted one record per line (JSON lines file), which is the required format for OCL import files.
+
+Set verbosity to 0 (e.g. `-v0`) to suppress the results summary output, which is required for the OCL import files. Set verbosity to 3 (`-v3`) to see all debug output.
+
+To create a smaller test dataset, use the `concept_limit` option (e.g. `--concept_limit=2000`):
+
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --concepts > c2k.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --mappings > m2k.json
+
+Note that the `concept_limit` parameter simply sets a maximum value for the OpenMRS concept_id. It is not a count of concepts, which means it current only works well for sequential numeric ID systems.
+
+You should validate reference sources before generating the export with the `check_sources` option:
+
+    manage.py extract_db --check_sources --env=... --token=...
 
 It is also possible to create a list of retired concept IDs (this is not used during import):
 
     manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --retired > retired_concepts.json
 
-You should validate reference sources before generating the export with the "check_sources" option:
-
-    manage.py extract_db --check_sources --env=... --token=...
-
-Set verbosity to 0 (e.g. '-v0') to suppress the results summary output. Set verbosity to 2
-to see all debug output.
-
-The OCL-CIEL test data set uses --concept_limit=2000:
-
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --concepts > c2k.json
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --mappings > m2k.json
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --retired > r2k.json
 
 NOTES:
 - OCL does not handle the OpenMRS drug table -- it is ignored for now
-
-BUGS:
-- 'concept_limit' parameter simply uses the CIEL concept_id rather than the actual
-   concept count, which means it only works for sequential numeric ID systems
-
-"""
 
 
 ## Design Notes
