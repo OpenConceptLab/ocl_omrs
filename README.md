@@ -4,53 +4,61 @@ This django project has scripts that make it easier to work with OCL and OpenMRS
 * **extract_db** generates JSON files from an OpenMRS v1.11 concept dictionary formatted for import into OCL
 * **validate_export** validates an OCL export file against an OpenMRS v1.11 concept dictionary
 
+Before running any of these commands, you must first set the MySQL database settings in `omrs/settings.py`.
+
+
 ## validate_export: OCL Export Validation
 
-Before running this, you must set the MySQL database settings in `omrs/settings.py`.
+This command compares OCL export files to an OpenMRS concept dictionary stored in MySql.
 
 Usage:
 ```
 ./manage.py validate_export --export=EXPORT_FILE_NAME [--ignore_retired_mappings] [-v[2]]
 ```
 
+
 ## extract_db: OpenMRS Database JSON Export
 
-This django project reads a OpenMRS database and extract the concept
-data for OCL. Typically you run this on a local machine with MySQL installed.
+This command produces OCL JSON import files for concepts and mappings stored in an OpenMRS v1.11 concept dictionary saved in MySql. Typically you run this on a local machine with MySQL installed.
 
 See the [OpenMRS Website/wiki](https://wiki.openmrs.org/display/docs/Concept+Data+Model) for download of the raw SQL and
 data dictionary.
 
-## Configuration
+Separate files should be created for concepts and mappings, for example:
 
-Use this tool in a local environment after setting and loading the OpenMRS SQL file into a MySQL database.
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concepts > concepts.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --mappings > mappings.json
 
-Make sure the settings.py file has the correct database settings.
+The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
+instead of human-readable format.
 
-Run the extract_db management command to extract concepts from the database:
+It is also possible to create a list of retired concept IDs (this is not used during import):
 
-```
-    # This will extract one Concept with ID 5839
-    ./manage.py extract_db --concept_id 5839
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --retired > retired_concepts.json
 
-    # This will extract the first 10 entries:
-    ./manage.py extract_db --count 10
+You should validate reference sources before generating the export with the "check_sources" option:
 
-    # This will extract all concepts
-    ./manage.py extract_db
+    manage.py extract_db --check_sources --env=... --token=...
 
-    # normally run this to do full export, output to stdout:
+Set verbosity to 0 (e.g. '-v0') to suppress the results summary output. Set verbosity to 2
+to see all debug output.
 
-    ./manage.py extract_db --raw
+The OCL-CIEL test data set uses --concept_limit=2000:
 
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --concepts > c2k.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --mappings > m2k.json
+    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --retired > r2k.json
 
-    # In addition if you need to create inputs to mapping import,
-    # use the --mapping argument, the mapping data will always
-    # write to a file called mapping.txt
-    
-    ./manage.py extract_db --mapping
-```
+NOTES:
+- OCL does not handle the OpenMRS drug table -- it is ignored for now
+
+BUGS:
+- 'concept_limit' parameter simply uses the CIEL concept_id rather than the actual
+   concept count, which means it only works for sequential numeric ID systems
+
+"""
+
 
 ## Design Notes
 
-The `models.py` file was created partially by scanning the mySQL schema, and the fixed up by hand. Not all classes are fully mapped yet.
+The `models.py` file was created partially by scanning the mySQL schema, and the fixed up by hand. Not all classes are fully mapped yet, as not all are imported into OCL.
