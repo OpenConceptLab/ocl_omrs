@@ -1,4 +1,8 @@
 # ocl_omrs
+See instructions for using this here: https://github.com/OpenConceptLab/oclapi/wiki/Importing-OpenMRS-Concept-Dictionary
+
+
+## Overview
 
 This django project has scripts that make it easier to work with OCL and OpenMRS:
 * **extract_db** generates JSON files from an OpenMRS v1.11 concept dictionary formatted for import into OCL
