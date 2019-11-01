@@ -1,4 +1,4 @@
-Django==1.6
+Django==1.11.23
 python-dateutil==2.1
 django-extensions
 MySQL-python==1.2.5
