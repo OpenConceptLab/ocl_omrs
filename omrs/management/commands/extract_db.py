@@ -1,37 +1,29 @@
 """
-Command to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
+Commands to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
 
-Separate files should be created for concepts and mappings, for example:
+1. Import into local mysql
 
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concepts > concepts.json
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --mappings > mappings.json
+2. Update settings.py with database settings
 
-The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
-instead of human-readable format.
+3. Check sources in specified OCL environment:
 
-It is also possible to create a list of retired concept IDs (this is not used during import):
+    python manage.py extract_db --check_sources --env=demo --token=<my-token-here>
 
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --retired > retired_concepts.json
+4a. Check sources and output as OCL-formatted bulk JSON:
 
-You should validate reference sources before generating the export with the "check_sources" option:
+    python manage.py extract_db --check_sources --env=demo --token=<my-token-here> --org_id=MyOrg --source_id=MySource --raw -v0 --concepts --mappings --format=bulk > my_ocl_bulk_import_file.json
 
-    manage.py extract_db --check_sources --env=... --token=...
+4b. Alternatively, create "old-style" OCL import scripts (separate for concept and mappings)
+    designed to be run directly on OCL server:
 
-Set verbosity to 0 (e.g. '-v0') to suppress the results summary output. Set verbosity to 2
-to see all debug output.
+    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --concepts > concepts.json
+    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --mappings > mappings.json
 
-The OCL-CIEL test data set uses --concept_limit=2000:
-
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --concepts > c2k.json
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --mappings > m2k.json
-    manage.py extract_db --org_id=CIEL --source_id=CIEL --raw -v0 --concept_limit=2000 --retired > r2k.json
+    The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
+    instead of human-readable format.
 
 NOTES:
 - OCL does not handle the OpenMRS drug table -- it is ignored for now
-
-BUGS:
-- 'concept_limit' parameter simply uses the CIEL concept_id rather than the actual
-   concept count, which means it only works for sequential numeric ID systems
 
 """
 from optparse import make_option
@@ -42,11 +34,12 @@ from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceExcepti
 import requests
 
 
-
 class Command(BaseCommand):
-    """
-    Extract concepts from OpenMRS database in the form of json
-    """
+    """ Extract concepts from OpenMRS database in the form of json """
+
+    OCL_IMPORT_FILE_FORMAT_STANDARD = 'standard'
+    OCL_IMPORT_FILE_FORMAT_BULK = 'bulk'
+    OCL_IMPORT_FILE_FORMATS = [OCL_IMPORT_FILE_FORMAT_STANDARD, OCL_IMPORT_FILE_FORMAT_BULK]
 
     # Command attributes
     help = 'Extract concepts from OpenMRS database in the form of json'
@@ -84,39 +77,34 @@ class Command(BaseCommand):
         make_option('--org_id',
                     action='store',
                     dest='org_id',
-                    default=None,
-                    help='org_id that owns the dictionary being imported (e.g. WHO)'),
+                    default='',
+                    help='org_id that owns the dictionary being imported (e.g. CIEL)'),
         make_option('--source_id',
                     action='store',
                     dest='source_id',
-                    default=None,
+                    default='',
                     help='source_id of dictionary being imported (e.g. ICD-10-WHO)'),
         make_option('--check_sources',
                     action='store_true',
                     dest='check_sources',
                     default=False,
                     help='Validates that all reference sources in OpenMRS have been defined in OCL.'),
+        make_option('--format',
+                    action='store',
+                    dest='ocl_import_file_format',
+                    default=OCL_IMPORT_FILE_FORMAT_STANDARD,
+                    help='JSON export format, "standard" (default) or "bulk"'),
         make_option('--env',
                     action='store',
                     dest='ocl_api_env',
-                    default='production',
-                    help='Set the target for reference source validation to "dev", "staging", or "production"'),
+                    default='',
+                    help='Set the target for reference source validation to "dev", "staging", "demo", or "production"'),
         make_option('--token',
                     action='store',
                     dest='token',
-                    default=None,
+                    default='',
                     help='OCL API token to validate OpenMRS reference sources'),
     )
-
-    OCL_API_URL = {
-        'dev': 'http://api.dev.openconceptlab.com/',
-        'staging': 'http://api.staging.openconceptlab.com/',
-        'production': 'http://api.openconceptlab.com/',
-    }
-
-
-
-    ## EXTRACT_DB COMMAND LINE HANDLER AND VALIDATION
 
     def handle(self, *args, **options):
         """
@@ -137,8 +125,10 @@ class Command(BaseCommand):
             self.concept_limit = int(self.concept_limit)
         self.verbosity = int(options['verbosity'])
         self.ocl_api_token = options['token']
+        self.ocl_api_env = ''
         if options['ocl_api_env']:
             self.ocl_api_env = options['ocl_api_env'].lower()
+        self.ocl_import_file_format = options['ocl_import_file_format']
 
         # Option debug output
         if self.verbosity >= 2:
@@ -147,14 +137,13 @@ class Command(BaseCommand):
         # Validate the options
         self.validate_options()
 
-        # Validate all reference sources
+        # Validate reference sources
         if options['check_sources']:
-            self.check_sources()
-
-        # Determine if an export request
-        self.do_export = False
-        if self.do_mapping or self.do_concept or self.do_retire:
-            self.do_export = True
+            if self.verbosity:
+                print 'CHECKING SOURCES...'
+            if not self.check_sources():
+                print '\nERROR: Missing required reference sources. Please correct and try again.'
+                exit(1)
 
         # Initialize counters
         self.cnt_total_concepts_processed = 0
@@ -169,17 +158,14 @@ class Command(BaseCommand):
         self.cnt_retired_concepts_exported = 0
 
         # Process concepts, mappings, or retirement script
-        if self.do_export:
+        if self.do_mapping or self.do_concept or self.do_retire:
             self.export()
-
-        # Display final counts
-        if self.verbosity:
-            self.print_debug_summary()
+            if self.verbosity:
+                self.print_export_summary()
 
     def validate_options(self):
         """
-        Returns true if command line options are valid, false otherwise.
-        Prints error message if invalid.
+        Returns true if command line options are valid. Prints error message if invalid.
         """
         # If concept/mapping export enabled, org/source IDs are required & must be valid mnemonics
         # TODO: Check that org and source IDs are valid mnemonics
@@ -189,11 +175,13 @@ class Command(BaseCommand):
                 ("ERROR: 'org_id' and 'source_id' are required options for a concept or "
                  "mapping export and must be valid identifiers for an organization and "
                  "source in OCL"))
-        if self.ocl_api_env not in self.OCL_API_URL:
+        if self.ocl_api_env and self.ocl_api_env not in OclOpenmrsHelper.OCL_API_URL:
             raise CommandError('Invalid "env" option provided: %s' % self.ocl_api_env)
+        if self.ocl_import_file_format not in self.OCL_IMPORT_FILE_FORMATS:
+            raise CommandError('Invalid "format" option provided: %s' % self.ocl_import_file_format)
         return True
 
-    def print_debug_summary(self):
+    def print_export_summary(self):
         """ Outputs a summary of the results """
         print '------------------------------------------------------'
         print 'SUMMARY'
@@ -217,48 +205,111 @@ class Command(BaseCommand):
             print 'EXPORT COUNT: Retired Concept IDs: %d' % self.cnt_retired_concepts_exported
         print '------------------------------------------------------'
 
-
-
-    ## REFERENCE SOURCE VALIDATOR
-
     def check_sources(self):
         """ Validates that all reference sources in OpenMRS have been defined in OCL. """
-        url_base = self.OCL_API_URL[self.ocl_api_env]
-        headers = {'Authorization': 'Token %s' % self.ocl_api_token}
+
+        # Set things up
+        ocl_env_url = '%s/' % OclOpenmrsHelper.OCL_API_URL[self.ocl_api_env]
+        headers = {}
+        if self.ocl_api_token:
+            headers['Authorization'] = 'Token %s' % self.ocl_api_token
+
+        # Grab the list of references sources in the OpenMRS dictionary from MySql
         reference_sources = ConceptReferenceSource.objects.all()
         reference_sources = reference_sources.filter(retired=0)
         enum_reference_sources = enumerate(reference_sources)
-        for num, source in enum_reference_sources:
-            source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(source.name)
-            if self.verbosity >= 1:
-                print 'Checking source "%s"' % source_id
 
-            # Check that source exists in the source directory (which maps sources to orgs)
-            org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=source_id)
-            if self.verbosity >= 1:
-                print '...found owner "%s" in source directory' % org_id
+        # Check if each reference source exists in the specified OCL environment
+        matching_sources = []
+        missing_source_in_ocl = []
+        missing_source_definition = []
+        org_fields_to_remove = ['collections_url', 'members_url', 'uuid', 'public_sources', 'url', 'public_collections', 'created_by', 'created_on', 'updated_by', 'members', 'updated_on', 'sources_url']
+        source_fields_to_remove = ['versions_url', 'created_on', 'updated_by', 'uuid', 'created_by', 'mappings_url', 'owner_url', 'concepts_url', 'versions', 'active_mappings', 'url', 'active_concepts', 'updated_on']
+        for num, source in enum_reference_sources:
+            if self.verbosity >= 2:
+                print 'Checking OpenMRS Reference source: "%s"' % source.name
+
+            # Check if the source definition exists in local source directory
+            try:
+                ocl_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(source.name)
+                ocl_org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=ocl_source_id)
+            except UnrecognizedSourceException:
+                missing_source_definition.append({
+                    'omrs_source': source,
+                    'omrs_ref_source_name': source.name
+                })
+                if self.verbosity >= 2:
+                    print '  ...Missing reference source definition'
+                continue
+            if self.verbosity >= 2:
+                print '  ...Corresponding source "%s" and owner "%s" found in source directory' % (
+                    ocl_source_id, ocl_org_id)
 
             # Check that org:source exists in OCL
-            if self.ocl_api_token:
-                url = url_base + 'orgs/%s/sources/%s/' % (org_id, source_id)
-                r = requests.head(url, headers=headers)
-                if r.status_code != requests.codes.OK:
-                    raise UnrecognizedSourceException('%s not found in OCL.' % url)
-                if self.verbosity >= 1:
-                    print '...found %s in OCL' % url
-            elif self.verbosity >= 1:
-                print '...no api token provided, skipping check on OCL.'
+            ocl_org_url = ocl_env_url + 'orgs/%s/' % (ocl_org_id)
+            ocl_source_url = ocl_env_url + 'orgs/%s/sources/%s/' % (ocl_org_id, ocl_source_id)
+            ocl_org_response = requests.get(ocl_org_url, headers=headers)
+            ocl_source_response = requests.get(ocl_source_url, headers=headers)
+            if self.verbosity >= 2:
+                try:
+                    ocl_org_json = ocl_org_response.json()
+                    ocl_source_json = ocl_source_response.json()
+                    [ocl_org_json.pop(key) for key in org_fields_to_remove]
+                    [ocl_source_json.pop(key) for key in source_fields_to_remove]
+                    print json.dumps(ocl_org_json)
+                    print json.dumps(ocl_source_json)
+                except Exception:
+                    pass
+            current_source = {
+                'omrs_source': source,
+                'omrs_ref_source_name': source.name,
+                'ocl_org_id': ocl_org_id,
+                'ocl_source_id': ocl_source_id,
+                'ocl_source_url': ocl_source_url,
+                'response_code': ocl_source_response.status_code
+            }
+            if ocl_source_response.status_code != requests.codes.OK:
+                missing_source_in_ocl.append(current_source)
+                if self.verbosity >= 2:
+                    print '  ...Org or source not found in OCL: %s' % ocl_source_url
+            else:
+                matching_sources.append(current_source)
+                if self.verbosity >= 2:
+                    print '  ...Org and source found in OCL: %s' % ocl_source_url
 
+        # Display the results
+        if self.verbosity:
+            print '------------------------------------------------------'
+            print 'CHECK SOURCES RESULTS:'
+            print '** Matched Sources:', len(matching_sources)
+            for source in matching_sources:
+                print '%s: %s' % (source['omrs_ref_source_name'], source['ocl_source_url'])
+
+            print '\n** Missing Source Definitions:', len(missing_source_definition)
+            for source in missing_source_definition:
+                source_definition = {
+                    'owner_type': 'org',
+                    'omrs_id': source['omrs_ref_source_name'],
+                    'owner_id': '',
+                    'ocl_id': ''
+                }
+                print '\n%s:' % source['omrs_ref_source_name']
+                print '- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__
+                print '- Template to add to source definitions:', json.dumps(source_definition)
+
+            print '\n** Missing Sources in OCL:', len(missing_source_in_ocl)
+            for source in missing_source_in_ocl:
+                print '\n%s:' % source['omrs_ref_source_name']
+                print '- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__
+                print '- Source Details:', source
+
+        if missing_source_definition or missing_source_in_ocl:
+            return False
         return True
-
-
-
-    ## MAIN EXPORT LOOP
 
     def export(self):
         """
         Main loop to export all concepts and/or their mappings.
-
         Loop thru all concepts and mappings and generates JSON export in the OCL format.
         Note that the retired status of concepts is not handled here.
         """
@@ -299,10 +350,6 @@ class Command(BaseCommand):
                 if export_data:
                     print json.dumps(export_data, indent=output_indent)
 
-
-
-    ## CONCEPT EXPORT
-
     def export_concept(self, concept):
         """
         Export one concept as OCL-formatted dictionary.
@@ -318,10 +365,9 @@ class Command(BaseCommand):
         self.cnt_concepts_exported += 1
 
         # Core concept fields
-        # TODO: Confirm that all core concept fields are populated
         extras = {}
         data = {}
-        data['id'] = concept.concept_id
+        data['id'] = str(concept.concept_id)
         data['concept_class'] = concept.concept_class.name
         data['datatype'] = concept.datatype.name
         data['external_id'] = concept.uuid
@@ -329,13 +375,20 @@ class Command(BaseCommand):
         if concept.is_set:
             extras['is_set'] = concept.is_set
 
+        # Add type, owner and source fields for bulk import
+        if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:
+            data['type'] = 'Concept'
+            data['owner'] = self.org_id
+            data['owner_type'] = 'Organization'
+            data['source'] = self.source_id
+
         # Concept Names
         names = []
         for concept_name in concept.conceptname_set.all():
             if not concept_name.voided:
                 names.append({
                     'name': concept_name.name,
-                    'name_type': concept_name.concept_name_type,
+                    'name_type': concept_name.concept_name_type if concept_name.concept_name_type else '',
                     'locale': concept_name.locale,
                     'locale_preferred': concept_name.locale_preferred,
                     'external_id': concept_name.uuid,
@@ -363,18 +416,12 @@ class Command(BaseCommand):
             add_f(extras_dict, 'low_critical', numeric_metadata.low_critical)
             add_f(extras_dict, 'low_normal', numeric_metadata.low_normal)
             add_f(extras_dict, 'units', numeric_metadata.units)
-            add_f(extras_dict, 'precise', numeric_metadata.precise)
+            # add_f(extras_dict, 'precise', numeric_metadata.precise)
             add_f(extras_dict, 'display_precision', numeric_metadata.display_precision)
             extras.update(extras_dict)
-
-        # TODO: Set additional concept extras
         data['extras'] = extras
 
         return data
-
-
-
-    ## MAPPING EXPORT
 
     def export_all_mappings_for_concept(self, concept, export_qanda=True, export_set_members=True):
         """
@@ -519,6 +566,11 @@ class Command(BaseCommand):
             self.org_id, self.source_id, to_concept_code)
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'external_id', external_id)
+        if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:
+            map_dict['type'] = 'Mapping'
+            map_dict['owner'] = self.org_id
+            map_dict['owner_type'] = 'Organization'
+            map_dict['source'] = self.source_id
         return map_dict
 
     def generate_external_mapping(self, map_type=None, from_concept=None,
@@ -535,11 +587,12 @@ class Command(BaseCommand):
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'to_concept_name', to_concept_name)
         add_f(map_dict, 'external_id', external_id)
+        if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:
+            map_dict['type'] = 'Mapping'
+            map_dict['owner'] = self.org_id
+            map_dict['owner_type'] = 'Organization'
+            map_dict['source'] = self.source_id
         return map_dict
-
-
-
-    ### RETIRED CONCEPT EXPORT
 
     def export_concept_id_if_retired(self, concept):
         """ Returns the concept's ID if it is retired, None otherwise. """

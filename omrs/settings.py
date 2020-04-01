@@ -1,5 +1,5 @@
 """
-Django settings for omrs project.
+Django settings for ocl_omrs project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/1.6/topics/settings/
@@ -7,6 +7,18 @@ https://docs.djangoproject.com/en/1.6/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.6/ref/settings/
 """
+
+# Database settings
+DATABASES = {
+    'default': {
+        'NAME': 'ciel_20200318',
+        'ENGINE': 'django.db.backends.mysql',
+        'USER': 'root',
+        'HOST': 'localhost',
+        'PORT': '3307',
+        'PASSWORD': '',
+    }
+}
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
@@ -23,7 +35,6 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'omrs',
 )
 
@@ -39,18 +50,6 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'omrs.urls'
 
 WSGI_APPLICATION = 'omrs.wsgi.application'
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        #'NAME': 'openmrs_20150824',
-        'NAME': 'openmrs_20150514',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3307',
-    }
-}
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'

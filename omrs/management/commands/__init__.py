@@ -10,9 +10,15 @@ class UnrecognizedSourceException(Exception):
 class OclOpenmrsHelper(object):
     """ Helper class for OpenMRS exporter and validator """
 
-    ## CONSTANTS
     MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
     MAP_TYPE_Q_AND_A = 'Q-AND-A'
+
+    OCL_API_URL = {
+        'qa': 'https://api.qa.openconceptlab.org',
+        'demo': 'https://api.demo.openconceptlab.org',
+        'staging': 'https://api.staging.openconceptlab.org',
+        'production': 'https://api.openconceptlab.org',
+    }
 
     # Directory of sources with metadata
     SOURCE_DIRECTORY = [
@@ -30,6 +36,7 @@ class OclOpenmrsHelper(object):
         {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'PIH Malawi', 'ocl_id':'PIH-Malawi'},
         {'owner_type':'org', 'owner_id':'AMPATH', 'omrs_id':'AMPATH', 'ocl_id':'AMPATH'},
         {'owner_type':'org', 'owner_id':'CIEL', 'omrs_id':'SNOMED MVP', 'ocl_id':'SNOMED-MVP'},
+        {'owner_type':'org', 'owner_id':'CIEL', 'omrs_id':'SNOMED UK', 'ocl_id':'SNOMED-UK'},
         {'owner_type':'org', 'owner_id':'OpenMRS', 'omrs_id':'org.openmrs.module.mdrtb', 'ocl_id':'org.openmrs.module.mdrtb'},
         {'owner_type':'org', 'owner_id':'MVP', 'omrs_id':'MVP Amazon Server 174', 'ocl_id':'MVP-Amazon-Server-174'},
         {'owner_type':'org', 'owner_id':'IHTSDO', 'omrs_id':'SNOMED US', 'ocl_id':'SNOMED-US'},
@@ -47,6 +54,23 @@ class OclOpenmrsHelper(object):
         {'owner_type':'org', 'owner_id':'NCI', 'omrs_id':'NCI Concept Code', 'ocl_id':'NCI-Concept-Code'},
         {'owner_type':'org', 'owner_id':'HL7', 'omrs_id':'HL7 DiagnosticReportStatus', 'ocl_id':'HL7-DiagnosticReportStatus'},
         {'owner_type':'org', 'owner_id':'HL7', 'omrs_id':'HL7 DiagnosticServiceSections', 'ocl_id':'HL7-DiagnosticServiceSections'},
+        {'owner_type':'org', 'owner_id':'AMA', 'omrs_id':'CPT', 'ocl_id':'CPT'},
+        {'owner_type':'org', 'owner_id':'RSNA', 'omrs_id':'Radlex', 'ocl_id':'Radlex'},
+        {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'Liberia MoH', 'ocl_id':'LiberiaMOH'},
+        {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'org.openmrs.module.mirebalaisreports', 'ocl_id':'org.openmrs.module.mirebalaisreports'},
+        {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'org.openmrs.module.hirifxray', 'ocl_id':'org.openmrs.module.hirifxray'},
+        {'owner_type':'org', 'owner_id':'VHA', 'omrs_id':'MED-RT NUI', 'ocl_id':'MED-RT-NUI'},
+        {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'WHOATC', 'ocl_id':'WHOATC'},
+        {'owner_type':'org', 'owner_id':'NAACCR', 'omrs_id':'NAACCR', 'ocl_id':'NAACCR'},
+        {'owner_type':'org', 'owner_id':'KenyaMOH', 'omrs_id':'KenyaEMR', 'ocl_id':'KenyaEMR'},
+        {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'Mexico MoH SIS', 'ocl_id':'Mexico-MoH-SIS'},
+        {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'Mexico MoH SUIVE', 'ocl_id':'Mexico-MoH-SUIVE'},
+
+        # Added for AMPATH dictionary import
+        # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
+        # {'owner_type':'org', 'owner_id':'CIEL', 'omrs_id':'MCL/CIEL', 'ocl_id':'CIEL'},
+        # {'owner_type':'org', 'owner_id':'NLM', 'omrs_id':'RxNorm', 'ocl_id':'RxNORM'},
+        # {'owner_type':'org', 'owner_id':'KenyaMOH', 'omrs_id':'KENYA EMR', 'ocl_id':'KenyaEMR'},
     ]
 
     @classmethod
