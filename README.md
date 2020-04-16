@@ -14,51 +14,43 @@ The extract_db script reads an OpenMRS v1.11 database and extracts the concept a
     mysql -u root -p ciel_20200124 < openmrs_concepts_1.11.4_20200124.sql
 
 2. Check sources in specified OCL environment:
-
-    python manage.py extract_db --check_sources --env=demo --token=[my-token-here]
-
+```
+python manage.py extract_db --check_sources --env=demo --token=[my-token-here]
+```
 3. Check sources and output as OCL-formatted bulk JSON:
    (Note: the import file generated is not specific to an environment)
-
+```
     python manage.py extract_db --check_sources --env=demo --token=<my-token-here> --org_id=MyOrg --source_id=MySource --raw -v0 --concepts --mappings --format=bulk > my_ocl_bulk_import_file.json
-
+```
 4. Alternatively, create "old-style" OCL import scripts (separate for concept and mappings)
     designed to be run directly on OCL server:
-
-    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --concepts > concepts.json
-    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --mappings > mappings.json
-
-    The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
-    instead of human-readable format.
-
-Optionally restrict output to a single concept or a limited number of concepts with the `concept_id` or `concept_limit` paramters:
 ```
-# This will extract one Concept with ID 5839
-./manage.py extract_db --concept_id 5839
-
-# This will extract the first 10 entries:
-./manage.py extract_db --concept_limit 10
+python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --concepts > concepts.json
+python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --mappings > mappings.json
 ```
+The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
+instead of human-readable format.
 
+Optionally restrict output to a single concept or a limited number of concepts with the `concept_id` or `concept_limit` paramters. For example, `--concept_id=5839` will only return the concept with an ID of 5839, or `--concept_limit=10` will only return the first 10 concept entries.
 
 ## Submit import using bulk import API
 If using the bulk import API format (see step #3 above), then you can validate and submit your import file using the following commands:
 
 1. Validate import file:
-
+```
     python manage.py import --validate-only --filename=[filename-here]
-
+```
 2. Submit using bulk import API:
-    
+``` 
     python manage.py import --env=production --token=[my-token-here] --filename=[filename-here]
+```
 
 ## validate_export: OCL Export Validation
 This command compares OCL export files to an OpenMRS concept dictionary stored in MySql.
 Usage:
 ```
-./manage.py validate_export --export=EXPORT_FILE_NAME [--ignore_retired_mappings] [-v[2]]
+python manage.py validate_export --export=EXPORT_FILE_NAME [--ignore_retired_mappings] [-v[2]]
 ```
-
 
 ## Design Notes
 * OCL-OpenMRS Subscription Module does not handle the OpenMRS drug table, so it is ignored for now
