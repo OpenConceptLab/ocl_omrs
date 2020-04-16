@@ -140,7 +140,7 @@ class Command(BaseCommand):
         # Validate reference sources
         if options['check_sources']:
             if self.verbosity:
-                print 'CHECKING SOURCES...'
+                print 'CHECKING REFERENCE SOURCES ON "%s"...' % self.ocl_api_env
             if not self.check_sources():
                 print '\nERROR: Missing required reference sources. Please correct and try again.'
                 exit(1)
@@ -399,11 +399,12 @@ class Command(BaseCommand):
         # NOTE: OMRS does not have description_type or locale_preferred -- omitted for now
         descriptions = []
         for concept_description in concept.conceptdescription_set.all():
-            descriptions.append({
-                'description': concept_description.description,
-                'locale': concept_description.locale,
-                'external_id': concept_description.uuid
-            })
+            if concept_description.description:
+                descriptions.append({
+                    'description': concept_description.description,
+                    'locale': concept_description.locale,
+                    'external_id': concept_description.uuid
+                })
         data['descriptions'] = descriptions
 
         # If the concept is of numeric type, map concept's numeric type data as extras

@@ -8,13 +8,17 @@ This django project has scripts that make it easier to work with OCL and OpenMRS
 ## extract_db: OpenMRS Database JSON Export
 The extract_db script reads an OpenMRS v1.11 database and extracts the concept and mapping data as JSON formatted for import into OCL. This script is typically run on a local machine with MySQL installed.
 
-1. Update settings.py with MySQL database settings for target OpenMRS concept dictionary
+1. Update settings.py with MySQL database settings for target OpenMRS concept dictionary.
+   If you are trying to import a new CIEL dictionary, you can import it into MySQL like this:
+
+    mysql -u root -p ciel_20200124 < openmrs_concepts_1.11.4_20200124.sql
 
 2. Check sources in specified OCL environment:
 
     python manage.py extract_db --check_sources --env=demo --token=[my-token-here]
 
 3. Check sources and output as OCL-formatted bulk JSON:
+   (Note: the import file generated is not specific to an environment)
 
     python manage.py extract_db --check_sources --env=demo --token=<my-token-here> --org_id=MyOrg --source_id=MySource --raw -v0 --concepts --mappings --format=bulk > my_ocl_bulk_import_file.json
 
@@ -36,6 +40,17 @@ Optionally restrict output to a single concept or a limited number of concepts w
 ./manage.py extract_db --concept_limit 10
 ```
 
+
+## Submit import using bulk import API
+If using the bulk import API format (see step #3 above), then you can validate and submit your import file using the following commands:
+
+1. Validate import file:
+
+    python manage.py import --validate-only --filename=[filename-here]
+
+2. Submit using bulk import API:
+    
+    python manage.py import --env=production --token=[my-token-here] --filename=[filename-here]
 
 ## validate_export: OCL Export Validation
 This command compares OCL export files to an OpenMRS concept dictionary stored in MySql.
