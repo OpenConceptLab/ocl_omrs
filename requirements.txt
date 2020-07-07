@@ -12,7 +12,7 @@ importlib-metadata==1.5.0
 jsonschema==3.2.0
 mysql-connector-python==8.0.19
 mysqlclient==1.4.6
-ocldev==0.1.56
+ocldev==0.1.70
 pathlib2==2.3.5
 protobuf==3.6.1
 pyrsistent==0.15.7

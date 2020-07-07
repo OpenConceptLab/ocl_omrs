@@ -2,6 +2,9 @@
 Commands to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
 
 1. Import into local mysql
+   NOTE: Be sure to use the correct character set for your MySql database, ex:
+
+    CREATE DATABASE ciel_20200706 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
 
 2. Update settings.py with database settings
 
@@ -9,29 +12,27 @@ Commands to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
 
     python manage.py extract_db --check_sources --env=demo --token=<my-token-here>
 
-4a. Check sources and output as OCL-formatted bulk JSON:
+4a. Check sources and output as OCL-formatted bulk import JSON:
 
-    python manage.py extract_db --check_sources --env=demo --token=<my-token-here> --org_id=MyOrg --source_id=MySource --raw -v0 --concepts --mappings --format=bulk > my_ocl_bulk_import_file.json
+    python manage.py extract_db --check_sources --env=demo --token=<my-token-here> --org_id=MyOrg --source_id=MySource -v0 --concepts --mappings --format=bulk > my_ocl_bulk_import_file.json
 
-4b. Alternatively, create "old-style" OCL import scripts (separate for concept and mappings)
+5. Alternatively, create "old-style" OCL import scripts (separate for concept and mappings)
     designed to be run directly on OCL server:
 
-    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --concepts > concepts.json
-    python manage.py extract_db --org_id=MyOrg --source_id=MySource --raw -v0 --mappings > mappings.json
-
-    The 'raw' option indicates that JSON should be formatted one record per line (JSON lines file)
-    instead of human-readable format.
+    python manage.py extract_db --org_id=MyOrg --source_id=MySource -v0 --concepts > concepts.json
+    python manage.py extract_db --org_id=MyOrg --source_id=MySource -v0 --mappings > mappings.json
 
 NOTES:
 - OCL does not handle the OpenMRS drug table -- it is ignored for now
 
 """
 from optparse import make_option
+import requests
 import json
 from django.core.management import BaseCommand, CommandError
 from omrs.models import Concept, ConceptReferenceSource
 from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceException
-import requests
+import ocldev.oclresourcelist
 
 
 class Command(BaseCommand):
@@ -64,16 +65,11 @@ class Command(BaseCommand):
                     dest='concept',
                     default=False,
                     help='Create concept input file.'),
-        make_option('--raw',
-                    action='store_true',
-                    dest='raw',
-                    default=False,
-                    help='Format JSON for import, otherwise format for display.'),
-        make_option('--retired',
-                    action='store_true',
-                    dest='retire_sw',
-                    default=False,
-                    help='If specify, output a list of retired concepts.'),
+        make_option('--indent',
+                    action='store',
+                    dest='indent',
+                    default=None,
+                    help='Indent JSON output for human-readability; default is 0.'),
         make_option('--org_id',
                     action='store',
                     dest='org_id',
@@ -109,7 +105,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """
         This method is called first directly from the command line, handles options, and calls
-        either export() or retired_concept_id_export() depending on options set.
+        export() depending on options set.
         """
 
         # Handle command line arguments
@@ -117,10 +113,9 @@ class Command(BaseCommand):
         self.source_id = options['source_id']
         self.concept_id = options['concept_id']
         self.concept_limit = options['concept_limit']
-        self.raw = options['raw']
+        self.indent = options['indent']
         self.do_mapping = options['mapping']
         self.do_concept = options['concept']
-        self.do_retire = options['retire_sw']
         if self.concept_limit is not None:
             self.concept_limit = int(self.concept_limit)
         self.verbosity = int(options['verbosity'])
@@ -157,8 +152,8 @@ class Command(BaseCommand):
         self.cnt_set_members_exported = 0
         self.cnt_retired_concepts_exported = 0
 
-        # Process concepts, mappings, or retirement script
-        if self.do_mapping or self.do_concept or self.do_retire:
+        # Process concepts and mappings script
+        if self.do_mapping or self.do_concept:
             self.export()
             if self.verbosity:
                 self.print_export_summary()
@@ -201,8 +196,6 @@ class Command(BaseCommand):
             print 'Questions Processed: %d' % self.cnt_questions_exported
             print 'Concept Sets Processed: %d' % self.cnt_concept_sets_exported
             print 'Ignored Self Mappings: %d' % self.cnt_ignored_self_mappings
-        if self.do_retire:
-            print 'EXPORT COUNT: Retired Concept IDs: %d' % self.cnt_retired_concepts_exported
         print '------------------------------------------------------'
 
     def check_sources(self):
@@ -314,11 +307,6 @@ class Command(BaseCommand):
         Note that the retired status of concepts is not handled here.
         """
 
-        # Set JSON indent value
-        output_indent = 4
-        if self.raw:
-            output_indent = None
-
         # Create the concept enumerator, applying 'concept_id' and 'concept_limit' options
         if self.concept_id is not None:
             # If 'concept_id' option set, fetch a single concept and convert to enumerator
@@ -333,22 +321,30 @@ class Command(BaseCommand):
             concept_enumerator = enumerate(concept_results)
 
         # Iterate concept enumerator and process the export
+        resource_list_concepts = ocldev.oclresourcelist.OclJsonResourceList()
+        resource_list_mappings = ocldev.oclresourcelist.OclJsonResourceList()
         for num, concept in concept_enumerator:
             self.cnt_total_concepts_processed += 1
             export_data = ''
             if self.do_concept:
                 export_data = self.export_concept(concept)
                 if export_data:
-                    print json.dumps(export_data, indent=output_indent)
+                    resource_list_concepts.append(export_data)
+                    # print json.dumps(export_data, indent=self.indent)
             if self.do_mapping:
                 export_data = self.export_all_mappings_for_concept(concept)
                 if export_data:
-                    for map_dict in export_data:
-                        print json.dumps(map_dict, indent=output_indent)
-            if self.do_retire:
-                export_data = self.export_concept_id_if_retired(concept)
-                if export_data:
-                    print json.dumps(export_data, indent=output_indent)
+                    resource_list_mappings.append(export_data)
+                    # for map_dict in export_data:
+                    #     print json.dumps(map_dict, indent=self.indent)
+
+        # Output
+        if len(resource_list_concepts):
+            for resource in resource_list_concepts:
+                print json.dumps(resource, indent=self.indent)
+        if len(resource_list_mappings):
+            for resource in resource_list_mappings:
+                print json.dumps(resource, indent=self.indent)
 
     def export_concept(self, concept):
         """
@@ -555,9 +551,8 @@ class Command(BaseCommand):
 
         return maps
 
-    def generate_internal_mapping(self, map_type=None, from_concept=None,
-                                  to_concept_code=None, external_id=None,
-                                  retired=False):
+    def generate_internal_mapping(self, map_type=None, from_concept=None, to_concept_code=None,
+                                  external_id=None, retired=False):
         """ Generate OCL-formatted dictionary for an internal mapping based on passed params. """
         map_dict = {}
         map_dict['map_type'] = map_type
@@ -594,14 +589,6 @@ class Command(BaseCommand):
             map_dict['owner_type'] = 'Organization'
             map_dict['source'] = self.source_id
         return map_dict
-
-    def export_concept_id_if_retired(self, concept):
-        """ Returns the concept's ID if it is retired, None otherwise. """
-        if concept.retired:
-            self.cnt_retired_concepts_exported += 1
-            return concept.concept_id
-        return None
-
 
 
 ## HELPER METHOD

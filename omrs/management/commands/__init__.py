@@ -65,6 +65,7 @@ class OclOpenmrsHelper(object):
         {'owner_type':'org', 'owner_id':'KenyaMOH', 'omrs_id':'KenyaEMR', 'ocl_id':'KenyaEMR'},
         {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'Mexico MoH SIS', 'ocl_id':'Mexico-MoH-SIS'},
         {'owner_type':'org', 'owner_id':'PIH', 'omrs_id':'Mexico MoH SUIVE', 'ocl_id':'Mexico-MoH-SUIVE'},
+        {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-11-WHO', 'ocl_id':'ICD-11-WHO'},
 
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
