@@ -5,7 +5,7 @@ if [ ${CIEL_FILE: -4} == ".zip" ]
 then
   echo "Unzipping file..."
   # Unzip into local subdirectory, ignoring __MACOSX folder
-  unzip $CIEL_FILE -x __*/* -d local/
+  unzip -o $CIEL_FILE -x __*/* -d local/
   CIEL_FILE=${CIEL_FILE%.*}
 fi
 
