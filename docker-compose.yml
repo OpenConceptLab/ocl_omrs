@@ -1,0 +1,23 @@
+version: "3.7"
+
+services:
+  db:
+    image: mysql:5.6
+    command: --max_allowed_packet=256M --character_set_server=utf8 --collation_server=utf8_general_ci
+    environment:
+      - MYSQL_ROOT_PASSWORD=openmrs
+    ports:
+      - 3306:3306
+  # docker-compose exec db mysql -u root -popenmrs mysql -e "CREATE DATABASE ciel;"
+  # docker exec -i ocl_omrs_db_1 mysql -u root -popenmrs ciel < openmrs_concepts_1.6.6_20200720.sql
+  # docker-compose exec db mysql -u root -popenmrs mysql
+
+  python:
+    build: .
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    environment:
+      - OCL_ENV=${OCL_ENV:-staging}
+      - CIEL_FILE=${CIEL_FILE:-ciel.sql}

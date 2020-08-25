@@ -9,19 +9,19 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Database settings
+import os
 DATABASES = {
     'default': {
-        'NAME': 'ciel_20200318',
+        'NAME': 'ciel',
         'ENGINE': 'django.db.backends.mysql',
         'USER': 'root',
-        'HOST': 'localhost',
-        'PORT': '3307',
-        'PASSWORD': '',
+        'HOST': 'db',
+        'PORT': '3306',
+        'PASSWORD': 'openmrs',
     }
 }
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 SECRET_KEY = '&k9$7-mea0-k6rxf_3!x8u8^akw&g03(r1l7!&0yu*7=m^%7*y'

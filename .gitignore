@@ -27,12 +27,11 @@ nosetests.xml
 # npm
 node_modules/
 
-# Campass
+# Compass
 .sass-cache
 
 # Ours
 media/
 *.sublime-*
-
 
 ocl.db
