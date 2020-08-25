@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # ciel-to-json.sh
-# Usage: ./ciel-to-json.sh CIEL_FILE [production|staging|demo|qa]
+# Usage: ./ciel-to-json.sh local/CIEL_FILE [qa|staging|production|demo]
 #
 # Where:
 #  CIEL_FILE = name of CIEL sql file
