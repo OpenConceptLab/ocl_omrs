@@ -34,4 +34,7 @@ node_modules/
 media/
 *.sublime-*
 
+# Mac noise
+.DS_Store
+
 ocl.db

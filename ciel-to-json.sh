@@ -6,11 +6,13 @@
 # Where:
 #  CIEL_FILE = name of CIEL sql file
 #  OCL_ENV = demo, staging, or production
+#  If FORCE_OLD_MODE=1 in environment, then output will be separate mapping & concepts
 # 
 # Loads the CIEL sql file into a database and then exports it to JSON
 
 CIEL_FILE=${1:-ciel.sql.zip}
 OCL_ENV=${2:-'staging'}
+FORCE_OLD_MODE=$FORCE_OLD_MODE
 
 if [ -z "$CIEL_FILE" ]
 then
@@ -36,7 +38,7 @@ done & # Run in the background
 echo "Processing $CIEL_FILE for $OCL_ENV"
 
 # Start up our database
-CIEL_FILE=$CIEL_FILE OCL_ENV=$OCL_ENV docker-compose up -d
+CIEL_FILE=$CIEL_FILE OCL_ENV=$OCL_ENV FORCE_OLD_MODE=$FORCE_OLD_MODE docker-compose up -d
 
 docker-compose logs -f python &
 

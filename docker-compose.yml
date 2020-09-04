@@ -21,3 +21,4 @@ services:
     environment:
       - OCL_ENV=${OCL_ENV:-staging}
       - CIEL_FILE=${CIEL_FILE:-ciel.sql}
+      - FORCE_OLD_MODE=${FORCE_OLD_MODE:-0}
