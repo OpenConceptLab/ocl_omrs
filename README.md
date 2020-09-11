@@ -1,5 +1,19 @@
 # ocl_omrs
 
+
+Generate OCL-formatted bulk import script from a mysql dump of an OpenMRS v1.11 concept dictionary and to validate its 
+map sources against the OCL staging server (staging.openconceptlab.org):
+```
+./ciel-to-json.sh local/openmrs_concepts_1.11.4_20200822.sql staging
+```
+
+Or, to generate separate JSON files for concepts and mappings (designed to be imported directly on the server):
+```
+FORCE_OLD_MODE=1 ./ciel-to-json.sh local/openmrs_concepts_1.11.4_20200822.sql staging
+```
+
+
+
 This django project has scripts that make it easier to work with OCL and OpenMRS:
 * **extract_db** will generate a JSON file from an OpenMRS v1.11 concept dictionary formatted for import into OCL
 * **import** submits a file for bulk import into OCL
