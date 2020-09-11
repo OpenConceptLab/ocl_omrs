@@ -27,12 +27,14 @@ nosetests.xml
 # npm
 node_modules/
 
-# Campass
+# Compass
 .sass-cache
 
 # Ours
 media/
 *.sublime-*
 
+# Mac noise
+.DS_Store
 
 ocl.db
