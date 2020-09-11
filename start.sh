@@ -16,7 +16,7 @@ then
 fi
 
 # Wait for database to be ready
-./wait-for-it.sh db:3306 --timeout 30
+./wait-for-it.sh db:3306 -t 30
 
 echo "Importing data..."
 python import_ciel.py 
