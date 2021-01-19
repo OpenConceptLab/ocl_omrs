@@ -448,7 +448,7 @@ class Command(BaseCommand):
             add_f(extras_dict, 'low_critical', numeric_metadata.low_critical)
             add_f(extras_dict, 'low_normal', numeric_metadata.low_normal)
             add_f(extras_dict, 'units', numeric_metadata.units)
-            # add_f(extras_dict, 'precise', numeric_metadata.precise)
+            add_f(extras_dict, 'precise', numeric_metadata.precise)
             add_f(extras_dict, 'display_precision', numeric_metadata.display_precision)
             extras.update(extras_dict)
         data['extras'] = extras
