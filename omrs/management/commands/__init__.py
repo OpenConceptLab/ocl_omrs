@@ -111,6 +111,12 @@ class OclOpenmrsHelper(object):
             'omrs_id': 'ICD-11-WHO', 'ocl_id': 'ICD-11-WHO'},
         {'owner_type': 'org', 'owner_id': 'WHO',
             'omrs_id': 'WHO ICHI', 'ocl_id': 'WHO-ICHI'},
+        {"omrs_id": "ICD-O Morphology", "ocl_id": "ICD-O-WHO-Morphology",
+            "owner_type": "org", "owner_id": "WHO"},
+        {"omrs_id": "ICD-O Histology", "ocl_id": "ICD-O-WHO-Histology",
+            "owner_type": "org", "owner_id": "WHO"},
+        {"omrs_id": "ICD-O Topology", "ocl_id": "ICD-O-WHO-Topology",
+            "owner_type": "org", "owner_id": "WHO"}
 
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
