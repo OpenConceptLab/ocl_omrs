@@ -116,7 +116,11 @@ class OclOpenmrsHelper(object):
         {"omrs_id": "ICD-O Histology", "ocl_id": "ICD-O-WHO-Histology",
             "owner_type": "org", "owner_id": "WHO"},
         {"omrs_id": "ICD-O Topology", "ocl_id": "ICD-O-WHO-Topology",
-            "owner_type": "org", "owner_id": "WHO"}
+            "owner_type": "org", "owner_id": "WHO"},
+        {"omrs_id": "org.openmrs.module.mirebalaisreports", "ocl_id": "org.openmrs.module.mirebalaisreports",
+         "owner_type": "org", "owner_id": "PIH"},
+        {"omrs_id": "Liberia MoH", "ocl_id": "LiberiaMOH",
+         "owner_type": "org", "owner_id": "PIH"}
 
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},

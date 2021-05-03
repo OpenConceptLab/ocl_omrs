@@ -1,6 +1,7 @@
 FROM python:2.7
 
 RUN apt-get update && \
+  apt-get install -y default-mysql-client && \
   pip install --upgrade pip && \
   pip install mysql.connector
 

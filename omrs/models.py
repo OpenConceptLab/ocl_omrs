@@ -61,9 +61,11 @@ class ConceptAnswer(models.Model):
     date_created = models.DateTimeField()
     uuid = models.CharField(unique=True, max_length=38)
     sort_weight = models.FloatField(blank=True, null=True)
+
     class Meta:
         managed = False
         db_table = 'concept_answer'
+
 
 class ConceptClass(models.Model):
     concept_class_id = models.IntegerField(primary_key=True)
@@ -96,6 +98,7 @@ class ConceptComplex(models.Model):
         managed = False
         db_table = 'concept_complex'
 
+
 class ConceptDatatype(models.Model):
     concept_datatype_id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -108,6 +111,7 @@ class ConceptDatatype(models.Model):
     date_retired = models.DateTimeField(blank=True, null=True)
     retire_reason = models.CharField(max_length=255, blank=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_datatype'
@@ -157,7 +161,7 @@ class ConceptMapType(models.Model):
 
 
 class ConceptName(models.Model):
-#    concept_id = models.IntegerField(blank=True, null=True)
+    #    concept_id = models.IntegerField(blank=True, null=True)
     concept = models.ForeignKey('Concept')
     name = models.CharField(max_length=255)
     locale = models.CharField(max_length=50)
@@ -180,6 +184,7 @@ class ConceptName(models.Model):
         managed = False
         db_table = 'concept_name'
 
+
 class ConceptNameTag(models.Model):
     concept_name_tag_id = models.IntegerField(unique=True)
     tag = models.CharField(unique=True, max_length=50)
@@ -191,13 +196,16 @@ class ConceptNameTag(models.Model):
     date_voided = models.DateTimeField(blank=True, null=True)
     void_reason = models.CharField(max_length=255, blank=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_name_tag'
 
+
 class ConceptNameTagMap(models.Model):
     concept_name = models.ForeignKey(ConceptName)
     concept_name_tag = models.ForeignKey(ConceptNameTag)
+
     class Meta:
         managed = False
         db_table = 'concept_name_tag_map'
@@ -212,11 +220,15 @@ class ConceptNumeric(models.Model):
     low_critical = models.FloatField(blank=True, null=True)
     low_normal = models.FloatField(blank=True, null=True)
     units = models.CharField(max_length=50, blank=True)
+    # ConceptNumeric.precise was renamed to allow_decimal in Platfrom 2.2 (TRUNK-5333)
     precise = models.IntegerField()
+    # allow_decimal = models.IntegerField()
     display_precision = models.IntegerField()
+
     class Meta:
         managed = False
         db_table = 'concept_numeric'
+
 
 class ConceptProposal(models.Model):
     concept_proposal_id = models.IntegerField(primary_key=True)
@@ -234,6 +246,7 @@ class ConceptProposal(models.Model):
     date_changed = models.DateTimeField(blank=True, null=True)
     locale = models.CharField(max_length=50)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_proposal'
@@ -327,6 +340,7 @@ class ConceptReferenceTermMap(models.Model):
     changed_by = models.IntegerField(blank=True, null=True)
     date_changed = models.DateTimeField(blank=True, null=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_reference_term_map'
@@ -336,24 +350,29 @@ class ConceptSet(models.Model):
     concept_set_id = models.IntegerField(primary_key=True)
 #    concept_id = models.IntegerField()
 #    concept_set = models.IntegerField()
-    concept = models.ForeignKey('Concept', db_column='concept_id', related_name='concept_set_parent')
+    concept = models.ForeignKey(
+        'Concept', db_column='concept_id', related_name='concept_set_parent')
     concept_set_owner = models.ForeignKey('Concept', db_column='concept_set')
     sort_weight = models.FloatField(blank=True, null=True)
     creator = models.IntegerField()
     date_created = models.DateTimeField()
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_set'
+
 
 class ConceptSetDerived(models.Model):
     concept_id = models.IntegerField()
     concept_set = models.IntegerField()
     sort_weight = models.FloatField(blank=True, null=True)
     uuid = models.CharField(max_length=38, blank=True)
+
     class Meta:
         managed = False
         db_table = 'concept_set_derived'
+
 
 class ConceptStateConversion(models.Model):
     concept_state_conversion_id = models.IntegerField(primary_key=True)
@@ -361,18 +380,22 @@ class ConceptStateConversion(models.Model):
     program_workflow_id = models.IntegerField(blank=True, null=True)
     program_workflow_state_id = models.IntegerField(blank=True, null=True)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_state_conversion'
+
 
 class ConceptStopWord(models.Model):
     concept_stop_word_id = models.IntegerField(primary_key=True)
     word = models.CharField(max_length=50)
     locale = models.CharField(max_length=20)
     uuid = models.CharField(unique=True, max_length=38)
+
     class Meta:
         managed = False
         db_table = 'concept_stop_word'
+
 
 class ConceptWord(models.Model):
     concept_word_id = models.IntegerField()
@@ -381,7 +404,7 @@ class ConceptWord(models.Model):
     locale = models.CharField(max_length=20)
     concept_name = models.ForeignKey(ConceptName)
     weight = models.FloatField(blank=True, null=True)
+
     class Meta:
         managed = False
         db_table = 'concept_word'
-
