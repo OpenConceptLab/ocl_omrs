@@ -42,9 +42,10 @@ Commands to create JSON for importing OpenMRS v1.11 concept dictionary into OCL.
    administrator.
 
 4. Update the MySql database model (/omrs/models.py) to reflect the version of the OpenMRS
-   dictionary you are importing. For example, OpenMRS v1.11 introduces a 'precise' field for
-   numeric fields, whereas older versions of OpenMRS do not. We recommend simply commenting
-   out fields that are not applicable to your OpenMRS version.
+   dictionary you are importing. For example, Platform 2.2 (TRUNK-5333) renamed the 'precise'
+   field for numeric fields to 'allow_decimal'. We recommend simply commenting out fields
+   that are not applicable to your OpenMRS version or, for TRUNK-5333 renaming the 'precise'
+   attribute of the concept_numeric table to 'allow_decimal' within the SQL being imported.
 
 5. Output as OCL-formatted bulk import JSON:
 
@@ -75,7 +76,8 @@ class Command(BaseCommand):
 
     OCL_IMPORT_FILE_FORMAT_STANDARD = 'standard'
     OCL_IMPORT_FILE_FORMAT_BULK = 'bulk'
-    OCL_IMPORT_FILE_FORMATS = [OCL_IMPORT_FILE_FORMAT_STANDARD, OCL_IMPORT_FILE_FORMAT_BULK]
+    OCL_IMPORT_FILE_FORMATS = [
+        OCL_IMPORT_FILE_FORMAT_STANDARD, OCL_IMPORT_FILE_FORMAT_BULK]
 
     # Command attributes
     help = 'Extract concepts from OpenMRS database in the form of json'
@@ -206,9 +208,11 @@ class Command(BaseCommand):
                  "mapping export and must be valid identifiers for an organization and "
                  "source in OCL"))
         if self.ocl_api_env and self.ocl_api_env not in OclOpenmrsHelper.OCL_API_URL:
-            raise CommandError('Invalid "env" option provided: %s' % self.ocl_api_env)
+            raise CommandError(
+                'Invalid "env" option provided: %s' % self.ocl_api_env)
         if self.ocl_import_file_format not in self.OCL_IMPORT_FILE_FORMATS:
-            raise CommandError('Invalid "format" option provided: %s' % self.ocl_import_file_format)
+            raise CommandError(
+                'Invalid "format" option provided: %s' % self.ocl_import_file_format)
         return True
 
     def print_export_summary(self):
@@ -251,16 +255,20 @@ class Command(BaseCommand):
         matching_sources = []
         missing_source_in_ocl = []
         missing_source_definition = []
-        org_fields_to_remove = ['collections_url', 'members_url', 'uuid', 'public_sources', 'url', 'public_collections', 'created_by', 'created_on', 'updated_by', 'members', 'updated_on', 'sources_url']
-        source_fields_to_remove = ['versions_url', 'created_on', 'updated_by', 'uuid', 'created_by', 'mappings_url', 'owner_url', 'concepts_url', 'versions', 'active_mappings', 'url', 'active_concepts', 'updated_on']
+        org_fields_to_remove = ['collections_url', 'members_url', 'uuid', 'public_sources', 'url',
+                                'public_collections', 'created_by', 'created_on', 'updated_by', 'members', 'updated_on', 'sources_url']
+        source_fields_to_remove = ['versions_url', 'created_on', 'updated_by', 'uuid', 'created_by', 'mappings_url',
+                                   'owner_url', 'concepts_url', 'versions', 'active_mappings', 'url', 'active_concepts', 'updated_on']
         for num, source in enum_reference_sources:
             if self.verbosity >= 2:
                 print 'Checking OpenMRS Reference source: "%s"' % source.name
 
             # Check if the source definition exists in local source directory
             try:
-                ocl_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(source.name)
-                ocl_org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=ocl_source_id)
+                ocl_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(
+                    source.name)
+                ocl_org_id = OclOpenmrsHelper.get_source_owner_id(
+                    ocl_source_id=ocl_source_id)
             except UnrecognizedSourceException:
                 missing_source_definition.append({
                     'omrs_source': source,
@@ -275,7 +283,8 @@ class Command(BaseCommand):
 
             # Check that org:source exists in OCL
             ocl_org_url = ocl_env_url + 'orgs/%s/' % (ocl_org_id)
-            ocl_source_url = ocl_env_url + 'orgs/%s/sources/%s/' % (ocl_org_id, ocl_source_id)
+            ocl_source_url = ocl_env_url + \
+                'orgs/%s/sources/%s/' % (ocl_org_id, ocl_source_id)
             ocl_org_response = requests.get(ocl_org_url, headers=headers)
             ocl_source_response = requests.get(ocl_source_url, headers=headers)
             if self.verbosity >= 2:
@@ -283,7 +292,8 @@ class Command(BaseCommand):
                     ocl_org_json = ocl_org_response.json()
                     ocl_source_json = ocl_source_response.json()
                     [ocl_org_json.pop(key) for key in org_fields_to_remove]
-                    [ocl_source_json.pop(key) for key in source_fields_to_remove]
+                    [ocl_source_json.pop(key)
+                     for key in source_fields_to_remove]
                     print json.dumps(ocl_org_json)
                     print json.dumps(ocl_source_json)
                 except Exception:
@@ -352,7 +362,8 @@ class Command(BaseCommand):
             # TODO: 'concept_limit' is based on numeric value of concept_id not on actual count
             concept_results = Concept.objects.all()
             if self.concept_limit is not None:
-                concept_results = concept_results.filter(concept_id__lte=self.concept_limit)
+                concept_results = concept_results.filter(
+                    concept_id__lte=self.concept_limit)
             concept_enumerator = enumerate(concept_results)
 
         # Iterate concept enumerator and process the export
@@ -448,8 +459,9 @@ class Command(BaseCommand):
             add_f(extras_dict, 'low_critical', numeric_metadata.low_critical)
             add_f(extras_dict, 'low_normal', numeric_metadata.low_normal)
             add_f(extras_dict, 'units', numeric_metadata.units)
-            add_f(extras_dict, 'precise', numeric_metadata.precise)
-            add_f(extras_dict, 'display_precision', numeric_metadata.display_precision)
+            add_f(extras_dict, 'allow_decimal', numeric_metadata.allow_decimal)
+            add_f(extras_dict, 'display_precision',
+                  numeric_metadata.display_precision)
             extras.update(extras_dict)
         data['extras'] = extras
 
@@ -514,8 +526,10 @@ class Command(BaseCommand):
             else:
                 # Prepare to_source_id
                 omrs_to_source_id = ref_map.concept_reference_term.concept_source.name
-                to_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(omrs_to_source_id)
-                to_org_id = OclOpenmrsHelper.get_source_owner_id(ocl_source_id=to_source_id)
+                to_source_id = OclOpenmrsHelper.get_ocl_source_id_from_omrs_id(
+                    omrs_to_source_id)
+                to_org_id = OclOpenmrsHelper.get_source_owner_id(
+                    ocl_source_id=to_source_id)
 
                 # Generate the external mapping dictionary
                 map_dict = self.generate_external_mapping(
@@ -613,7 +627,8 @@ class Command(BaseCommand):
         map_dict['map_type'] = map_type
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
             self.org_id, self.source_id, from_concept.concept_id)
-        map_dict['to_source_url'] = '/orgs/%s/sources/%s/' % (to_org_id, to_source_id)
+        map_dict['to_source_url'] = '/orgs/%s/sources/%s/' % (
+            to_org_id, to_source_id)
         map_dict['to_concept_code'] = to_concept_code
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'to_concept_name', to_concept_name)
@@ -626,7 +641,7 @@ class Command(BaseCommand):
         return map_dict
 
 
-## HELPER METHOD
+# HELPER METHOD
 
 def add_f(dictionary, key, value):
     """Utility function: Adds new field to the dictionary if value is not None"""

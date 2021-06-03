@@ -80,7 +80,9 @@ administrator.
 4. Update the MySql database model (`/omrs/models.py`) to reflect the version of the OpenMRS
    dictionary you are importing. For example, in OpenMRS Platform v2.2, the 'precise' field for
    numeric fields was renamed to 'allow_decimal'. We recommend simply commenting out fields that
-   are not applicable to your OpenMRS version.
+   are not applicable to your OpenMRS version. For SQL imports prior to Platform v2.2, we
+   recommend renaming the 'precise' attribute of the concept_numeric table to 'allow_decimal'
+   within the SQL file before importing.
 
 5. Output as OCL-formatted bulk import JSON:
    (Note: the import file generated is not specific to an environment)

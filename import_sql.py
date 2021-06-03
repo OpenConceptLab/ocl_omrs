@@ -44,7 +44,7 @@ filename = os.environ.get("SQL_FILE") + '.sql'
 print("Processing file %s" % filename)
 source_file = os.path.abspath(filename)
 os.system("mysql -u %s -p%s -h db %s < %s" %
-          ("root", "openmrs", "ciel", source_file))
+          ("root", "openmrs", "openmrs", source_file))
 
 # file = open(filename, 'r')
 # sql = ""
