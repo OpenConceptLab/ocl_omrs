@@ -3,7 +3,7 @@ certifi==2019.11.28
 chardet==3.0.4
 configparser==4.0.2
 contextlib2==0.6.0.post1
-Django==1.6
+Django==2.2.24
 django-extensions==2.2.1
 dnspython==1.16.0
 functools32==3.2.3.post2
