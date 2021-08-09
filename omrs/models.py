@@ -221,8 +221,8 @@ class ConceptNumeric(models.Model):
     low_normal = models.FloatField(blank=True, null=True)
     units = models.CharField(max_length=50, blank=True)
     # ConceptNumeric.precise was renamed to allow_decimal in Platform 2.2 (TRUNK-5333)
-    # precise = models.IntegerField()
     allow_decimal = models.IntegerField()
+    #allow_decimal = models.IntegerField(db_column='precise')
     display_precision = models.IntegerField()
 
     class Meta:
