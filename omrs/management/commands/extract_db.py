@@ -69,6 +69,7 @@ from django.core.management import BaseCommand, CommandError
 from omrs.models import Concept, ConceptReferenceSource
 from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceException
 import ocldev.oclresourcelist
+import urllib
 
 
 class Command(BaseCommand):
@@ -282,9 +283,9 @@ class Command(BaseCommand):
                     ocl_source_id, ocl_org_id)
 
             # Check that org:source exists in OCL
-            ocl_org_url = ocl_env_url + 'orgs/%s/' % (ocl_org_id)
+            ocl_org_url = ocl_env_url + 'orgs/%s/' % (q(ocl_org_id))
             ocl_source_url = ocl_env_url + \
-                'orgs/%s/sources/%s/' % (ocl_org_id, ocl_source_id)
+                'orgs/%s/sources/%s/' % (q(ocl_org_id), q(ocl_source_id))
             ocl_org_response = requests.get(ocl_org_url, headers=headers)
             ocl_source_response = requests.get(ocl_source_url, headers=headers)
             if self.verbosity >= 2:
@@ -606,9 +607,9 @@ class Command(BaseCommand):
         map_dict = {}
         map_dict['map_type'] = map_type
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            self.org_id, self.source_id, from_concept.concept_id)
+            q(self.org_id), q(self.source_id), q(from_concept.concept_id))
         map_dict['to_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            self.org_id, self.source_id, to_concept_code)
+            q(self.org_id), q(self.source_id), q(to_concept_code))
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'external_id', external_id)
         if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:
@@ -626,9 +627,9 @@ class Command(BaseCommand):
         map_dict = {}
         map_dict['map_type'] = map_type
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            self.org_id, self.source_id, from_concept.concept_id)
+            q(self.org_id), q(self.source_id), q(from_concept.concept_id))
         map_dict['to_source_url'] = '/orgs/%s/sources/%s/' % (
-            to_org_id, to_source_id)
+            q(to_org_id), q(to_source_id))
         map_dict['to_concept_code'] = to_concept_code
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'to_concept_name', to_concept_name)
@@ -641,9 +642,14 @@ class Command(BaseCommand):
         return map_dict
 
 
-# HELPER METHOD
+# HELPER METHODS
 
 def add_f(dictionary, key, value):
     """Utility function: Adds new field to the dictionary if value is not None"""
     if value is not None:
         dictionary[key] = value
+
+
+def q(s):
+    """Utility function to URL encode value using quote_plus and work if int passed"""
+    return urllib.quote_plus(str(s))
