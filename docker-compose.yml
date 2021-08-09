@@ -18,7 +18,8 @@ services:
     volumes:
       - .:/app
     environment:
-      - OCL_ENV=${OCL_ENV:-staging}
-      - OCL_ORG=${OCL_ORG:-CIEL}
-      - SQL_FILE=${SQL_FILE:-openmrs.sql}
-      - FORCE_OLD_MODE=${FORCE_OLD_MODE:-0}
+      - OCL_ENV
+      - OCL_ORG
+      - SOURCE_ID
+      - SQL_FILE
+      - FORCE_OLD_MODE
