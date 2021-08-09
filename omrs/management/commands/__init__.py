@@ -111,16 +111,18 @@ class OclOpenmrsHelper(object):
             'omrs_id': 'ICD-11-WHO', 'ocl_id': 'ICD-11-WHO'},
         {'owner_type': 'org', 'owner_id': 'WHO',
             'omrs_id': 'WHO ICHI', 'ocl_id': 'WHO-ICHI'},
-        {"omrs_id": "ICD-O Morphology", "ocl_id": "ICD-O-WHO-Morphology",
-            "owner_type": "org", "owner_id": "WHO"},
-        {"omrs_id": "ICD-O Histology", "ocl_id": "ICD-O-WHO-Histology",
-            "owner_type": "org", "owner_id": "WHO"},
-        {"omrs_id": "ICD-O Topology", "ocl_id": "ICD-O-WHO-Topology",
-            "owner_type": "org", "owner_id": "WHO"},
-        {"omrs_id": "org.openmrs.module.mirebalaisreports", "ocl_id": "org.openmrs.module.mirebalaisreports",
-         "owner_type": "org", "owner_id": "PIH"},
-        {"omrs_id": "Liberia MoH", "ocl_id": "LiberiaMOH",
-         "owner_type": "org", "owner_id": "PIH"}
+        {'omrs_id': 'ICD-O Morphology', 'ocl_id': 'ICD-O-WHO-Morphology',
+            'owner_type': 'org', 'owner_id': 'WHO'},
+        {'omrs_id': 'ICD-O Histology', 'ocl_id': 'ICD-O-WHO-Histology',
+            'owner_type': 'org', 'owner_id': 'WHO'},
+        {'omrs_id': 'ICD-O Topology', 'ocl_id': 'ICD-O-WHO-Topology',
+            'owner_type': 'org', 'owner_id': 'WHO'},
+        {'omrs_id': 'org.openmrs.module.mirebalaisreports', 'ocl_id': 'org.openmrs.module.mirebalaisreports',
+         'owner_type': 'org', 'owner_id': 'PIH'},
+        {'omrs_id': 'Liberia MoH', 'ocl_id': 'LiberiaMOH',
+         'owner_type': 'org', 'owner_id': 'PIH'},
+        {'omrs_id': 'HL-7 MVX code', 'ocl_id': 'MVX',
+            'owner_type': 'org', 'owner_id': 'HL7'}
 
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
