@@ -38,6 +38,7 @@ while true; do
 		sleep 1
 	fi
 done & # Run in the background
+BACKGROUND_PID=$!
 
 echo "Processing $SQL_FILE for $OCL_ENV"
 
@@ -53,7 +54,7 @@ docker-compose up -d
 
 docker-compose logs -f python &
 
-wait # Wait for the `while true` loop to be broken
+wait $BACKGROUND_PID # Wait for the `while true` loop to be broken
 
 echo "Done."
 
