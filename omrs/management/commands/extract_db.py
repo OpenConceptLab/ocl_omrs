@@ -66,7 +66,7 @@ from optparse import make_option
 import requests
 import json
 from django.core.management import BaseCommand, CommandError
-from omrs.models import Concept, ConceptReferenceSource
+from omrs.models import Concept, ConceptReferenceSource, ConceptReferenceMap
 from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceException
 import ocldev.oclresourcelist
 import urllib
@@ -145,7 +145,6 @@ class Command(BaseCommand):
         This method is called first directly from the command line, handles options, and calls
         export() depending on options set.
         """
-
         # Handle command line arguments
         self.org_id = options['org_id']
         self.source_id = options['source_id']
@@ -189,6 +188,9 @@ class Command(BaseCommand):
         self.cnt_concept_sets_exported = 0
         self.cnt_set_members_exported = 0
         self.cnt_retired_concepts_exported = 0
+
+        # Prepare for gold mappings
+        self.gold_mappings_dict = None
 
         # Process concepts and mappings script
         if self.do_mapping or self.do_concept:
@@ -410,7 +412,7 @@ class Command(BaseCommand):
         # Core concept fields
         extras = {}
         data = {}
-        data['id'] = str(concept.concept_id)
+        data['id'] = self.apply_gold_mappings(concept.concept_id)
         data['concept_class'] = concept.concept_class.name
         data['datatype'] = concept.datatype.name
         data['external_id'] = concept.uuid
@@ -468,6 +470,24 @@ class Command(BaseCommand):
 
         return data
 
+    def apply_gold_mappings(self, concept_id):
+        """
+        Converts a concept ID to the official "gold" ID based on available mappings
+        """
+        if not self.gold_mappings_dict:
+            self.gold_mappings_dict = {}
+            gold_mappings = ConceptReferenceMap.objects.filter(
+                concept_reference_term__concept_source__name=self.org_id,
+                map_type__name=OclOpenmrsHelper.MAP_TYPE_SAME_AS,
+                concept_reference_term__code__regex=r'^[0-9]+$')
+            for mapping in gold_mappings:
+                self.gold_mappings_dict[str(mapping.concept.concept_id)] = str(
+                    mapping.concept_reference_term.code)
+        gold_id = str(concept_id)
+        if gold_id in self.gold_mappings_dict:
+            gold_id = self.gold_mappings_dict[gold_id]
+        return gold_id
+
     def export_all_mappings_for_concept(self, concept, export_qanda=True, export_set_members=True):
         """
         Export mappings for the specified concept, including its set members and linked answers.
@@ -512,10 +532,6 @@ class Command(BaseCommand):
 
             # Internal Mapping
             if ref_map.concept_reference_term.concept_source.name == self.org_id:
-                if str(concept.concept_id) == ref_map.concept_reference_term.code:
-                    # mapping to self, so ignore
-                    self.cnt_ignored_self_mappings += 1
-                    continue
                 map_dict = self.generate_internal_mapping(
                     map_type=ref_map.map_type.name,
                     from_concept=concept,
@@ -607,9 +623,9 @@ class Command(BaseCommand):
         map_dict = {}
         map_dict['map_type'] = map_type
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            q(self.org_id), q(self.source_id), q(from_concept.concept_id))
+            q(self.org_id), q(self.source_id), q(self.apply_gold_mappings(from_concept.concept_id)))
         map_dict['to_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            q(self.org_id), q(self.source_id), q(to_concept_code))
+            q(self.org_id), q(self.source_id), q(self.apply_gold_mappings(to_concept_code)))
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'external_id', external_id)
         if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:
@@ -627,7 +643,7 @@ class Command(BaseCommand):
         map_dict = {}
         map_dict['map_type'] = map_type
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            q(self.org_id), q(self.source_id), q(from_concept.concept_id))
+            q(self.org_id), q(self.source_id), q(self.apply_gold_mappings(from_concept.concept_id)))
         map_dict['to_source_url'] = '/orgs/%s/sources/%s/' % (
             q(to_org_id), q(to_source_id))
         map_dict['to_concept_code'] = to_concept_code

@@ -11,6 +11,7 @@ class OclOpenmrsHelper(object):
 
     MAP_TYPE_CONCEPT_SET = 'CONCEPT-SET'
     MAP_TYPE_Q_AND_A = 'Q-AND-A'
+    MAP_TYPE_SAME_AS = 'SAME-AS'
 
     OCL_API_URL = {
         'qa': 'https://api.qa.openconceptlab.org',
