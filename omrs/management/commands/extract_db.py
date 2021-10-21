@@ -586,6 +586,7 @@ class Command(BaseCommand):
                 from_concept=concept,
                 to_concept_code=answer.answer_concept.concept_id,
                 external_id=answer.uuid)
+            add_f(map_dict, 'extras', {'sort_weight': answer.sort_weight})
             maps.append(map_dict)
             self.cnt_answers_exported += 1
 
@@ -612,6 +613,7 @@ class Command(BaseCommand):
                 from_concept=concept,
                 to_concept_code=set_member.concept.concept_id,
                 external_id=set_member.uuid)
+            add_f(map_dict, 'extras', {'sort_weight': set_member.sort_weight})
             maps.append(map_dict)
             self.cnt_set_members_exported += 1
 
