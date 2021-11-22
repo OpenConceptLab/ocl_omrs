@@ -88,7 +88,8 @@ class ConceptClass(models.Model):
 
 
 class ConceptComplex(models.Model):
-    concept = models.ForeignKey(Concept, primary_key=True)
+    concept = models.OneToOneField(Concept, primary_key=True,
+        related_name='complex_handler')
     handler = models.CharField(max_length=255, blank=True)
 
     def __unicode__(self):

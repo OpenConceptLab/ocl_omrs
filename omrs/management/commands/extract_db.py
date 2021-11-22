@@ -466,6 +466,11 @@ class Command(BaseCommand):
             add_f(extras_dict, 'display_precision',
                   numeric_metadata.display_precision)
             extras.update(extras_dict)
+
+        # If the concept is complex, map hander as extra
+        if hasattr(concept, 'complex_handler'):
+            add_f(extras, 'handler', concept.complex_handler.handler)
+
         data['extras'] = extras
 
         return data
