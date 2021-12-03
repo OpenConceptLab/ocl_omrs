@@ -138,6 +138,12 @@ class Command(BaseCommand):
                     dest='token',
                     default='',
                     help='OCL API token to validate OpenMRS reference sources'),
+        make_option('--use_gold_mappings',
+                    action='store',
+                    choices=['0','1'],
+                    dest='use_gold_mappings',
+                    default='0',
+                    help='Set to "1" if gold mappings should be used'),
     )
 
     def handle(self, *args, **options):
@@ -161,6 +167,7 @@ class Command(BaseCommand):
         if options['ocl_api_env']:
             self.ocl_api_env = options['ocl_api_env'].lower()
         self.ocl_import_file_format = options['ocl_import_file_format']
+        self.use_gold_mappings = options['use_gold_mappings'] == '1'
 
         # Option debug output
         if self.verbosity >= 2:
@@ -477,8 +484,16 @@ class Command(BaseCommand):
 
     def apply_gold_mappings(self, concept_id):
         """
-        Converts a concept ID to the official "gold" ID based on available mappings
+        Converts a concept ID to the official "gold" ID based on available mappings.
+        RuntimeException raised if gold mapping not found, assigned to more than one
+        concept, or any concept has more than one gold mapping.
         """
+        # Abort if we're not using gold mappings
+        if not self.use_gold_mappings:
+            return concept_id
+        # Skip any codes that aren't numeric
+        if type(concept_id) != int and not unicode(concept_id).isnumeric():
+            return concept_id
         if not self.gold_mappings_dict:
             self.gold_mappings_dict = {}
             gold_mappings = ConceptReferenceMap.objects.filter(
@@ -486,12 +501,28 @@ class Command(BaseCommand):
                 map_type__name=OclOpenmrsHelper.MAP_TYPE_SAME_AS,
                 concept_reference_term__code__regex=r'^[0-9]+$')
             for mapping in gold_mappings:
-                self.gold_mappings_dict[str(mapping.concept.concept_id)] = str(
-                    mapping.concept_reference_term.code)
-        gold_id = str(concept_id)
-        if gold_id in self.gold_mappings_dict:
-            gold_id = self.gold_mappings_dict[gold_id]
-        return gold_id
+                mapped_concept_id = str(mapping.concept.concept_id)
+                gold_mapping_code = str(mapping.concept_reference_term.code)
+                if mapped_concept_id in self.gold_mappings_dict:
+                    raise RuntimeError(("Concepts can only have one gold mapping. "
+                        "Concept '%s' has gold mapping to '%s' and '%s'") % 
+                        (mapped_concept_id,
+                        self.gold_mappings_dict[mapped_concept_id],
+                        gold_mapping_code))
+                if gold_mapping_code in self.gold_mappings_dict.values():
+                    raise RuntimeError(("Gold mappings must be unique. The gold "
+                        "mapping '%s' is assigned to concepts '%s' and '%s'.") %
+                        (gold_mapping_code,
+                        ', '.join([k for k, v in self.gold_mappings_dict.items()
+                            if v == gold_mapping_code]),
+                        mapped_concept_id))
+                self.gold_mappings_dict[mapped_concept_id] = gold_mapping_code
+        local_concept_id = str(concept_id)
+        if not local_concept_id in self.gold_mappings_dict:
+            raise RuntimeError("No gold mapping found for concept '%s'" %
+                local_concept_id)
+        return self.gold_mappings_dict[local_concept_id]
+
 
     def export_all_mappings_for_concept(self, concept, export_qanda=True, export_set_members=True):
         """
@@ -632,7 +663,7 @@ class Command(BaseCommand):
         map_dict['from_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
             q(self.org_id), q(self.source_id), q(self.apply_gold_mappings(from_concept.concept_id)))
         map_dict['to_concept_url'] = '/orgs/%s/sources/%s/concepts/%s/' % (
-            q(self.org_id), q(self.source_id), q(self.apply_gold_mappings(to_concept_code)))
+            q(self.org_id), q(self.source_id), q(to_concept_code))
         map_dict['retired'] = bool(retired)
         add_f(map_dict, 'external_id', external_id)
         if self.ocl_import_file_format == self.OCL_IMPORT_FILE_FORMAT_BULK:

@@ -9,6 +9,7 @@
 #  SOURCE_ID = name of source within organization (default 'CIEL')
 #  OCL_ENV = demo, staging, or production (default 'staging')
 #  If FORCE_OLD_MODE=1 in environment, then output will be separate mapping & concepts
+#  If USE_GOLD_MAPPINGS=1 in environment, gold mappings will be required and used
 # 
 # Loads the OpenMRS sql file into a database and then exports it to JSON
 
@@ -17,6 +18,7 @@ OCL_ORG="${2:-CIEL}"
 SOURCE_ID="${3:-CIEL}"
 OCL_ENV="${4:-staging}"
 FORCE_OLD_MODE="$FORCE_OLD_MODE"
+USE_GOLD_MAPPINGS="${USE_GOLD_MAPPINGS:-0}"
 
 if [ -z "$SQL_FILE" ]
 then
@@ -50,6 +52,7 @@ export OCL_ORG
 export SOURCE_ID
 export OCL_ENV
 export FORCE_OLD_MODE
+export USE_GOLD_MAPPINGS
 docker-compose up -d
 
 docker-compose logs -f python &
