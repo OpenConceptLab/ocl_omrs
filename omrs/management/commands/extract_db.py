@@ -620,7 +620,7 @@ class Command(BaseCommand):
             map_dict = self.generate_internal_mapping(
                 map_type=OclOpenmrsHelper.MAP_TYPE_Q_AND_A,
                 from_concept=concept,
-                to_concept_code=answer.answer_concept.concept_id,
+                to_concept_code=self.apply_gold_mappings(answer.answer_concept.concept_id),
                 external_id=answer.uuid)
             add_f(map_dict, 'extras', {'sort_weight': answer.sort_weight})
             maps.append(map_dict)
@@ -647,7 +647,7 @@ class Command(BaseCommand):
             map_dict = self.generate_internal_mapping(
                 map_type=OclOpenmrsHelper.MAP_TYPE_CONCEPT_SET,
                 from_concept=concept,
-                to_concept_code=set_member.concept.concept_id,
+                to_concept_code=self.apply_gold_mappings(set_member.concept.concept_id),
                 external_id=set_member.uuid)
             add_f(map_dict, 'extras', {'sort_weight': set_member.sort_weight})
             maps.append(map_dict)
