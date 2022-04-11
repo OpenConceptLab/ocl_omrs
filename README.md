@@ -1,5 +1,11 @@
 # ocl_omrs
 
+## Prerequisites
+
+* [Docker](https://www.docker.com/)
+
+## Generating import
+
 Generate OCL-formatted bulk import script from a mysql dump of an OpenMRS v1.11 concept dictionary and to validate its
 map sources against the OCL staging server (staging.openconceptlab.org):
 
@@ -19,7 +25,9 @@ This django project has scripts that make it easier to work with OCL and OpenMRS
 - **import** submits a file for bulk import into OCL
 - **validate_export** validates an OCL export file against an OpenMRS v1.11 concept dictionary
 
-## extract_db: OpenMRS Database JSON Export
+## Legacy instructions
+
+### extract_db: OpenMRS Database JSON Export
 
 The extract_db script reads an OpenMRS v1.11 database and extracts the concept and mapping data as JSON formatted for import into OCL. This script is typically run on a local machine with MySQL installed.
 
@@ -101,7 +109,7 @@ python manage.py extract_db --org_id=MyOrg --source_id=MySource -v0 --mappings >
 
 Optionally restrict output to a single concept or a limited number of concepts with the `concept_id` or `concept_limit` paramters. For example, `--concept_id=5839` will only return the concept with an ID of 5839, or `--concept_limit=10` will only return the first 10 concept entries.
 
-## Submit import using bulk import API
+### Submit import using bulk import API
 
 If using the bulk import API format (see step #3 above), then you can validate and submit your import file using the following commands:
 
@@ -117,7 +125,7 @@ If using the bulk import API format (see step #3 above), then you can validate a
     python manage.py import --env=production --token=[my-token-here] --filename=[filename-here]
 ```
 
-## validate_export: OCL Export Validation
+### validate_export: OCL Export Validation
 
 This command compares OCL export files to an OpenMRS concept dictionary stored in MySql.
 Usage:
@@ -126,7 +134,7 @@ Usage:
 python manage.py validate_export --export=EXPORT_FILE_NAME [--ignore_retired_mappings] [-v[2]]
 ```
 
-## Design Notes
+### Design Notes
 
 - OCL-OpenMRS Subscription Module does not handle the OpenMRS drug table, so it is ignored for now
 - `models.py` was created partially by scanning the mySQL schema, and the fixed up by hand. Not all classes are fully mapped yet, as not all are used by the OCL-OpenMRS Subscription Module.
