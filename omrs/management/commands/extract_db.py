@@ -490,10 +490,10 @@ class Command(BaseCommand):
         """
         # Abort if we're not using gold mappings
         if not self.use_gold_mappings:
-            return concept_id
+            return str(concept_id)
         # Skip any codes that aren't numeric
         if type(concept_id) != int and not unicode(concept_id).isnumeric():
-            return concept_id
+            return str(concept_id)
         if not self.gold_mappings_dict:
             self.gold_mappings_dict = {}
             gold_mappings = ConceptReferenceMap.objects.filter(
