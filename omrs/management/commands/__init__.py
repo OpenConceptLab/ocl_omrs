@@ -34,6 +34,8 @@ class OclOpenmrsHelper(object):
             'omrs_id': 'RxNORM Comb', 'ocl_id': 'RxNORM-Comb'},
         {'owner_type': 'org', 'owner_id': 'Regenstrief',
             'omrs_id': 'LOINC', 'ocl_id': 'LOINC'},
+        {'owner_type': 'org', 'owner_id': 'Regenstrief',
+            'omrs_id': 'UCUM', 'ocl_id': 'UCUM'},
         {'owner_type': 'org', 'owner_id': 'WHO',
             'omrs_id': 'ICD-10-WHO NP', 'ocl_id': 'ICD-10-WHO-NP'},
         {'owner_type': 'org', 'owner_id': 'WHO',
@@ -86,6 +88,10 @@ class OclOpenmrsHelper(object):
             'ocl_id': 'HL7-DiagnosticReportStatus'},
         {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 DiagnosticServiceSections',
             'ocl_id': 'HL7-DiagnosticServiceSections'},
+        {'omrs_id': 'HL-7 MVX code', 'ocl_id': 'MVX',
+            'owner_type': 'org', 'owner_id': 'HL7'},
+        {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 Medication Dispense Status',
+            'ocl_id': 'HL7-MedicationDispenseStatus'},
         {'owner_type': 'org', 'owner_id': 'AMA',
             'omrs_id': 'CPT', 'ocl_id': 'CPT'},
         {'owner_type': 'org', 'owner_id': 'RSNA',
@@ -122,8 +128,8 @@ class OclOpenmrsHelper(object):
          'owner_type': 'org', 'owner_id': 'PIH'},
         {'omrs_id': 'Liberia MoH', 'ocl_id': 'LiberiaMOH',
          'owner_type': 'org', 'owner_id': 'PIH'},
-        {'omrs_id': 'HL-7 MVX code', 'ocl_id': 'MVX',
-            'owner_type': 'org', 'owner_id': 'HL7'}
+        {"omrs_id": 'OMOP RxNORM Extension', 'ocl_id': 'OMOP-RxNORM',
+            'owner_type': 'org', 'owner_id': 'OHDSI'}
 
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
