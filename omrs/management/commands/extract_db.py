@@ -621,8 +621,8 @@ class Command(BaseCommand):
                 map_type=OclOpenmrsHelper.MAP_TYPE_Q_AND_A,
                 from_concept=concept,
                 to_concept_code=self.apply_gold_mappings(answer.answer_concept.concept_id),
-                external_id=answer.uuid)
-            add_f(map_dict, 'extras', {'sort_weight': answer.sort_weight})
+                external_id=answer.uuid,
+                sort_weight=answer.sort_weight)
             maps.append(map_dict)
             self.cnt_answers_exported += 1
 
@@ -648,15 +648,15 @@ class Command(BaseCommand):
                 map_type=OclOpenmrsHelper.MAP_TYPE_CONCEPT_SET,
                 from_concept=concept,
                 to_concept_code=self.apply_gold_mappings(set_member.concept.concept_id),
-                external_id=set_member.uuid)
-            add_f(map_dict, 'extras', {'sort_weight': set_member.sort_weight})
+                external_id=set_member.uuid,
+                sort_weight=set_member.sort_weight)
             maps.append(map_dict)
             self.cnt_set_members_exported += 1
 
         return maps
 
     def generate_internal_mapping(self, map_type=None, from_concept=None, to_concept_code=None,
-                                  external_id=None, retired=False):
+                                  external_id=None, retired=False, sort_weight=None):
         """ Generate OCL-formatted dictionary for an internal mapping based on passed params. """
         map_dict = {}
         map_dict['map_type'] = map_type
@@ -671,6 +671,8 @@ class Command(BaseCommand):
             map_dict['owner'] = self.org_id
             map_dict['owner_type'] = 'Organization'
             map_dict['source'] = self.source_id
+        if sort_weight != None:
+            map_dict['sort_weight'] = sort_weight
         return map_dict
 
     def generate_external_mapping(self, map_type=None, from_concept=None,
