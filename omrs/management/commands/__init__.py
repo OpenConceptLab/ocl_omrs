@@ -92,6 +92,8 @@ class OclOpenmrsHelper(object):
             'owner_type': 'org', 'owner_id': 'HL7'},
         {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 Medication Dispense Status',
             'ocl_id': 'HL7-MedicationDispenseStatus'},
+        {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 Medication Dispense Status Reason',
+            'ocl_id': 'medicationdispense-status-reason'},
         {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 Act Substance Admin Substitution Code',
             'ocl_id': 'HL7-ActSubstanceAdminSubstitutionCode'},
         {'owner_type': 'org', 'owner_id': 'HL7', 'omrs_id': 'HL7 Substance Admin Substitution Reason',
@@ -128,7 +130,9 @@ class OclOpenmrsHelper(object):
             'owner_type': 'org', 'owner_id': 'WHO'},
         {'omrs_id': 'ICD-O Topology', 'ocl_id': 'ICD-O-WHO-Topology',
             'owner_type': 'org', 'owner_id': 'WHO'},
-       {'omrs_id': 'ANC DAK', 'ocl_id': 'ANC-DAK',
+        {'omrs_id': 'WHO ICF', 'ocl_id': 'WHO-ICF', 
+            'owner_type': 'org', 'owner_id': 'WHO'},
+        {'omrs_id': 'ANC DAK', 'ocl_id': 'ANC-DAK',
             'owner_type': 'org', 'owner_id': 'WHO'},
         {'omrs_id': 'org.openmrs.module.mirebalaisreports', 'ocl_id': 'org.openmrs.module.mirebalaisreports',
          'owner_type': 'org', 'owner_id': 'PIH'},
@@ -137,7 +141,7 @@ class OclOpenmrsHelper(object):
         {'omrs_id': 'OMOP RxNORM Extension', 'ocl_id': 'OMOP-RxNORM',
             'owner_type': 'org', 'owner_id': 'OHDSI'},
         {'omrs_id': 'OMOP Extension', 'ocl_id': 'OMOP-Extension',
-            'owner_type': 'org', "owner_id": 'OHDSI'}
+            'owner_type': 'org', 'owner_id': 'OHDSI'}
  
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
