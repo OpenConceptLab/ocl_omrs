@@ -572,7 +572,7 @@ class Command(BaseCommand):
                     map_type=ref_map.map_type.name,
                     from_concept=concept,
                     to_concept_code=ref_map.concept_reference_term.code,
-                    external_id=ref_map.concept_reference_term.uuid)
+                    external_id=ref_map.uuid)
                 self.cnt_internal_mappings_exported += 1
 
             # External Mapping
