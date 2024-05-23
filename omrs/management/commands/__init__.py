@@ -141,13 +141,16 @@ class OclOpenmrsHelper(object):
         {'omrs_id': 'OMOP RxNORM Extension', 'ocl_id': 'OMOP-RxNORM',
             'owner_type': 'org', 'owner_id': 'OHDSI'},
         {'omrs_id': 'OMOP Extension', 'ocl_id': 'OMOP-Extension',
-            'owner_type': 'org', 'owner_id': 'OHDSI'}
+            'owner_type': 'org', 'owner_id': 'OHDSI'},
  
         # Added for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
         # {'owner_type':'org', 'owner_id':'CIEL', 'omrs_id':'MCL/CIEL', 'ocl_id':'CIEL'},
         # {'owner_type':'org', 'owner_id':'NLM', 'omrs_id':'RxNorm', 'ocl_id':'RxNORM'},
         # {'owner_type':'org', 'owner_id':'KenyaMOH', 'omrs_id':'KENYA EMR', 'ocl_id':'KenyaEMR'},
+        # {'omrs_id': 'local', 'ocl_id': 'AMPATH', 'owner_type': 'org', 'owner_id': 'AMPATH'},
+        # {'omrs_id': 'ICD-O', 'ocl_id': 'ICD-O-WHO-Morphology', 'owner_type': 'org', 'owner_id': 'WHO'},
+        # {'omrs_id': 'NHDD', 'ocl_id': 'KenyaEMR', 'owner_type': 'org', 'owner_id': 'KenyaMOH'},
     ]
 
     @classmethod
