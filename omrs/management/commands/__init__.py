@@ -134,6 +134,8 @@ class OclOpenmrsHelper(object):
             'owner_type': 'org', 'owner_id': 'WHO'},
         {'omrs_id': 'ANC DAK', 'ocl_id': 'ANC-DAK',
             'owner_type': 'org', 'owner_id': 'WHO'},
+        {'omrs_id': 'WHO-HIV-DAK', 'ocl_id': 'WHO-HIV-DAK', 
+            'owner_type': 'org', 'owner_id': 'WHO'},
         {'omrs_id': 'org.openmrs.module.mirebalaisreports', 'ocl_id': 'org.openmrs.module.mirebalaisreports',
          'owner_type': 'org', 'owner_id': 'PIH'},
         {'omrs_id': 'Liberia MoH', 'ocl_id': 'LiberiaMOH',
