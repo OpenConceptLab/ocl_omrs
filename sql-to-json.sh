@@ -31,7 +31,7 @@ while true; do
 	if [ "$(docker ps -a -f status=exited | grep python)" ]; then
 
 		# Shut down stack
-		docker-compose down -v
+		docker compose down -v
 
 		# Return program flow to the `wait` line
 		break
@@ -53,9 +53,9 @@ export SOURCE_ID
 export OCL_ENV
 export FORCE_OLD_MODE
 export USE_GOLD_MAPPINGS
-docker-compose up -d
+docker compose up -d
 
-docker-compose logs -f python &
+docker compose logs -f python &
 
 wait $BACKGROUND_PID # Wait for the `while true` loop to be broken
 

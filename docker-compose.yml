@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   db:
     # Switched to mariadb to support arm64 (not supported by mysql:5.7 images)
