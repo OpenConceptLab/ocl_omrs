@@ -438,10 +438,12 @@ class Command(BaseCommand):
         names = []
         for concept_name in concept.conceptname_set.all():
             if not concept_name.voided:
+                # Replace obsolete Indonesian locale of "in" to "id"
+                locale = 'id' if concept_name.locale == 'in' else concept_name.locale
                 names.append({
                     'name': concept_name.name,
                     'name_type': concept_name.concept_name_type if concept_name.concept_name_type else '',
-                    'locale': concept_name.locale,
+                    'locale': locale,
                     'locale_preferred': concept_name.locale_preferred,
                     'external_id': concept_name.uuid,
                 })
