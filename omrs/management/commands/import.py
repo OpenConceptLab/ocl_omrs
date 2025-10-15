@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
         # Validate command line arguments
         if options['verbosity']:
-            print options
+            print(options)
         if not options['ocl_import_filename']:
             raise CommandError('Missing required argument "filename"')
         if not options['validate_only']:
@@ -52,18 +52,18 @@ class Command(BaseCommand):
         with open(options['ocl_import_filename']) as json_lines_input_file:
             for raw_json_line in json_lines_input_file:
                 input_list.append(json.loads(raw_json_line))
-        print '%s resources loaded from \"%s\"' % (len(input_list), options['ocl_import_filename'])
+        print('%s resources loaded from "%s"' % (len(input_list), options['ocl_import_filename']))
 
         # Validate resources
-        print 'Validating...'
+        print('Validating...')
         ocldev.oclvalidator.OclJsonValidator.validate(input_list)
 
         # Run the import
         if options['validate_only']:
-            print 'Skipping import due to settings...'
+            print('Skipping import due to settings...')
         else:
             ocl_api_url_root = OclOpenmrsHelper.OCL_API_URL[options['ocl_api_env']]
-            print 'Submitting bulk import to "%s"...' % ocl_api_url_root
+            print('Submitting bulk import to "%s"...' % ocl_api_url_root)
             import_request = ocldev.oclfleximporter.OclBulkImporter.post(
                 file_path=options['ocl_import_filename'],
                 api_url_root=ocl_api_url_root,
@@ -71,5 +71,5 @@ class Command(BaseCommand):
             import_request.raise_for_status()
             import_response = import_request.json()
             task_id = import_response['task']
-            print 'Bulk Import Task ID: %s' % task_id
-            print 'Request status at: %s/manage/bulkimport/?task=%s' % (ocl_api_url_root, task_id)
+            print('Bulk Import Task ID: %s' % task_id)
+            print('Request status at: %s/manage/bulkimport/?task=%s' % (ocl_api_url_root, task_id))

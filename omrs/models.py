@@ -37,6 +37,9 @@ class Concept(models.Model):
         rs = self.conceptname_set.filter(locale_preferred=True)
         return rs[0].name
 
+    def __str__(self):
+        return self.__unicode__()
+
     class Meta:
         managed = False
         db_table = 'concept'
@@ -82,6 +85,9 @@ class ConceptClass(models.Model):
     def __unicode__(self):
         return self.name
 
+    def __str__(self):
+        return self.__unicode__()
+
     class Meta:
         managed = False
         db_table = 'concept_class'
@@ -94,6 +100,9 @@ class ConceptComplex(models.Model):
 
     def __unicode__(self):
         return self.handler
+
+    def __str__(self):
+        return self.__unicode__()
 
     class Meta:
         managed = False
@@ -159,6 +168,9 @@ class ConceptMapType(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    def __str__(self):
+        return self.__unicode__()
 
 
 class ConceptName(models.Model):

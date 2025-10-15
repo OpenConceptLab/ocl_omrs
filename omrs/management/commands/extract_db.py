@@ -62,14 +62,13 @@ NOTES:
 - OCL does not handle the OpenMRS drug table -- it is ignored for now
 
 """
-from optparse import make_option
 import requests
 import json
 from django.core.management import BaseCommand, CommandError
 from omrs.models import Concept, ConceptReferenceSource, ConceptReferenceMap
 from omrs.management.commands import OclOpenmrsHelper, UnrecognizedSourceException
 import ocldev.oclresourcelist
-import urllib
+import urllib.parse as urllib
 
 
 class Command(BaseCommand):
@@ -82,69 +81,75 @@ class Command(BaseCommand):
 
     # Command attributes
     help = 'Extract concepts from OpenMRS database in the form of json'
-    option_list = BaseCommand.option_list + (
-        make_option('--concept_id',
-                    action='store',
-                    dest='concept_id',
-                    default=None,
-                    help='ID for concept to export, if specified only export this one. e.g. 5839'),
-        make_option('--concept_limit',
-                    action='store',
-                    dest='concept_limit',
-                    default=None,
-                    help='Use to limit the number of concepts exported. Useful for testing.'),
-        make_option('--mappings',
-                    action='store_true',
-                    dest='mapping',
-                    default=False,
-                    help='Create mapping input file.'),
-        make_option('--concepts',
-                    action='store_true',
-                    dest='concept',
-                    default=False,
-                    help='Create concept input file.'),
-        make_option('--indent',
-                    action='store',
-                    dest='indent',
-                    default=None,
-                    help='Indent JSON output for human-readability; default is 0.'),
-        make_option('--org_id',
-                    action='store',
-                    dest='org_id',
-                    default='',
-                    help='org_id that owns the dictionary being imported (e.g. CIEL)'),
-        make_option('--source_id',
-                    action='store',
-                    dest='source_id',
-                    default='',
-                    help='source_id of dictionary being imported (e.g. ICD-10-WHO)'),
-        make_option('--check_sources',
-                    action='store_true',
-                    dest='check_sources',
-                    default=False,
-                    help='Validates that all reference sources in OpenMRS have been defined in OCL.'),
-        make_option('--format',
-                    action='store',
-                    dest='ocl_import_file_format',
-                    default=OCL_IMPORT_FILE_FORMAT_STANDARD,
-                    help='JSON export format, "standard" (default) or "bulk"'),
-        make_option('--env',
-                    action='store',
-                    dest='ocl_api_env',
-                    default='',
-                    help='Set the target for reference source validation to "dev", "staging", "demo", or "production"'),
-        make_option('--token',
-                    action='store',
-                    dest='token',
-                    default='',
-                    help='OCL API token to validate OpenMRS reference sources'),
-        make_option('--use_gold_mappings',
-                    action='store',
-                    choices=['0','1'],
-                    dest='use_gold_mappings',
-                    default='0',
-                    help='Set to "1" if gold mappings should be used'),
-    )
+    def add_arguments(self, parser):
+        """Argparse-style arguments replacement for deprecated optparse option_list."""
+        # single-value options
+        parser.add_argument('--concept_id',
+                            dest='concept_id',
+                            default=None,
+                            help='ID for concept to export, if specified only export this one. e.g. 5839')
+
+        parser.add_argument('--concept_limit',
+                            dest='concept_limit',
+                            type=int,
+                            default=None,
+                            help='Use to limit the number of concepts exported. Useful for testing.')
+
+        # boolean flags
+        parser.add_argument('--mappings',
+                            dest='mapping',
+                            action='store_true',
+                            default=False,
+                            help='Create mapping input file.')
+
+        parser.add_argument('--concepts',
+                            dest='concept',
+                            action='store_true',
+                            default=False,
+                            help='Create concept input file.')
+
+        parser.add_argument('--indent',
+                            dest='indent',
+                            default=None,
+                            help='Indent JSON output for human-readability; default is 0.')
+
+        parser.add_argument('--org_id',
+                            dest='org_id',
+                            default='',
+                            help='org_id that owns the dictionary being imported (e.g. CIEL)')
+
+        parser.add_argument('--source_id',
+                            dest='source_id',
+                            default='',
+                            help='source_id of dictionary being imported (e.g. ICD-10-WHO)')
+
+        parser.add_argument('--check_sources',
+                            dest='check_sources',
+                            action='store_true',
+                            default=False,
+                            help='Validates that all reference sources in OpenMRS have been defined in OCL.')
+
+        parser.add_argument('--format',
+                            dest='ocl_import_file_format',
+                            default=self.OCL_IMPORT_FILE_FORMAT_STANDARD,
+                            choices=self.OCL_IMPORT_FILE_FORMATS,
+                            help='JSON export format, "standard" (default) or "bulk"')
+
+        parser.add_argument('--env',
+                            dest='ocl_api_env',
+                            default='',
+                            help='Set the target for reference source validation to "dev", "staging", "demo", or "production"')
+
+        parser.add_argument('--token',
+                            dest='token',
+                            default='',
+                            help='OCL API token to validate OpenMRS reference sources')
+
+        parser.add_argument('--use_gold_mappings',
+                            dest='use_gold_mappings',
+                            choices=['0', '1'],
+                            default='0',
+                            help='Set to "1" if gold mappings should be used')
 
     def handle(self, *args, **options):
         """
@@ -171,7 +176,7 @@ class Command(BaseCommand):
 
         # Option debug output
         if self.verbosity >= 2:
-            print 'COMMAND LINE OPTIONS:', options
+            print('COMMAND LINE OPTIONS:', options)
 
         # Validate the options
         self.validate_options()
@@ -179,9 +184,9 @@ class Command(BaseCommand):
         # Validate reference sources
         if options['check_sources']:
             if self.verbosity:
-                print 'CHECKING REFERENCE SOURCES ON "%s"...' % self.ocl_api_env
+                print('CHECKING REFERENCE SOURCES ON "%s"...' % self.ocl_api_env)
             if not self.check_sources():
-                print '\nERROR: Missing required reference sources. Please correct and try again.'
+                print('\nERROR: Missing required reference sources. Please correct and try again.')
                 exit(1)
 
         # Initialize counters
@@ -227,25 +232,25 @@ class Command(BaseCommand):
 
     def print_export_summary(self):
         """ Outputs a summary of the results """
-        print '------------------------------------------------------'
-        print 'SUMMARY'
-        print '------------------------------------------------------'
-        print 'Total concepts processed: %d' % self.cnt_total_concepts_processed
+        print('------------------------------------------------------')
+        print('SUMMARY')
+        print('------------------------------------------------------')
+        print('Total concepts processed: %d' % self.cnt_total_concepts_processed)
         if self.do_concept:
-            print 'EXPORT COUNT: Concepts: %d' % self.cnt_concepts_exported
+            print('EXPORT COUNT: Concepts: %d' % self.cnt_concepts_exported)
         if self.do_mapping:
-            print 'EXPORT COUNT: All Mappings: %d' % (self.cnt_internal_mappings_exported +
+            print('EXPORT COUNT: All Mappings: %d' % (self.cnt_internal_mappings_exported +
                                                       self.cnt_external_mappings_exported +
                                                       self.cnt_answers_exported +
-                                                      self.cnt_set_members_exported)
-            print 'EXPORT COUNT: Internal Mappings: %d' % self.cnt_internal_mappings_exported
-            print 'EXPORT COUNT: External Mappings: %d' % self.cnt_external_mappings_exported
-            print 'EXPORT COUNT: Linked Answer Mappings: %d' % self.cnt_answers_exported
-            print 'EXPORT COUNT: Set Member Mappings: %d' % self.cnt_concepts_exported
-            print 'Questions Processed: %d' % self.cnt_questions_exported
-            print 'Concept Sets Processed: %d' % self.cnt_concept_sets_exported
-            print 'Ignored Self Mappings: %d' % self.cnt_ignored_self_mappings
-        print '------------------------------------------------------'
+                                                      self.cnt_set_members_exported))
+            print('EXPORT COUNT: Internal Mappings: %d' % self.cnt_internal_mappings_exported)
+            print('EXPORT COUNT: External Mappings: %d' % self.cnt_external_mappings_exported)
+            print('EXPORT COUNT: Linked Answer Mappings: %d' % self.cnt_answers_exported)
+            print('EXPORT COUNT: Set Member Mappings: %d' % self.cnt_concepts_exported)
+            print('Questions Processed: %d' % self.cnt_questions_exported)
+            print('Concept Sets Processed: %d' % self.cnt_concept_sets_exported)
+            print('Ignored Self Mappings: %d' % self.cnt_ignored_self_mappings)
+        print('------------------------------------------------------')
 
     def check_sources(self):
         """ Validates that all reference sources in OpenMRS have been defined in OCL. """
@@ -271,7 +276,7 @@ class Command(BaseCommand):
                                    'owner_url', 'concepts_url', 'versions', 'active_mappings', 'url', 'active_concepts', 'updated_on']
         for num, source in enum_reference_sources:
             if self.verbosity >= 2:
-                print 'Checking OpenMRS Reference source: "%s"' % source.name
+                print('Checking OpenMRS Reference source: "%s"' % source.name)
 
             # Check if the source definition exists in local source directory
             try:
@@ -285,11 +290,11 @@ class Command(BaseCommand):
                     'omrs_ref_source_name': source.name
                 })
                 if self.verbosity >= 2:
-                    print '  ...Missing reference source definition'
+                    print('  ...Missing reference source definition')
                 continue
             if self.verbosity >= 2:
-                print '  ...Corresponding source "%s" and owner "%s" found in source directory' % (
-                    ocl_source_id, ocl_org_id)
+                print('  ...Corresponding source "%s" and owner "%s" found in source directory' % (
+                    ocl_source_id, ocl_org_id))
 
             # Check that org:source exists in OCL
             ocl_org_url = ocl_env_url + 'orgs/%s/' % (q(ocl_org_id))
@@ -304,8 +309,8 @@ class Command(BaseCommand):
                     [ocl_org_json.pop(key) for key in org_fields_to_remove]
                     [ocl_source_json.pop(key)
                      for key in source_fields_to_remove]
-                    print json.dumps(ocl_org_json)
-                    print json.dumps(ocl_source_json)
+                    print(json.dumps(ocl_org_json))
+                    print(json.dumps(ocl_source_json))
                 except Exception:
                     pass
             current_source = {
@@ -319,21 +324,21 @@ class Command(BaseCommand):
             if ocl_source_response.status_code != requests.codes.OK:
                 missing_source_in_ocl.append(current_source)
                 if self.verbosity >= 2:
-                    print '  ...Org or source not found in OCL: %s' % ocl_source_url
+                    print('  ...Org or source not found in OCL: %s' % ocl_source_url)
             else:
                 matching_sources.append(current_source)
                 if self.verbosity >= 2:
-                    print '  ...Org and source found in OCL: %s' % ocl_source_url
+                    print('  ...Org and source found in OCL: %s' % ocl_source_url)
 
         # Display the results
         if self.verbosity:
-            print '------------------------------------------------------'
-            print 'CHECK SOURCES RESULTS:'
-            print '** Matched Sources:', len(matching_sources)
+            print('------------------------------------------------------')
+            print('CHECK SOURCES RESULTS:')
+            print('** Matched Sources:', len(matching_sources))
             for source in matching_sources:
-                print '%s: %s' % (source['omrs_ref_source_name'], source['ocl_source_url'])
+                print('%s: %s' % (source['omrs_ref_source_name'], source['ocl_source_url']))
 
-            print '\n** Missing Source Definitions:', len(missing_source_definition)
+            print('\n** Missing Source Definitions:', len(missing_source_definition))
             for source in missing_source_definition:
                 source_definition = {
                     'owner_type': 'org',
@@ -341,15 +346,15 @@ class Command(BaseCommand):
                     'owner_id': '',
                     'ocl_id': ''
                 }
-                print '\n%s:' % source['omrs_ref_source_name']
-                print '- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__
-                print '- Template to add to source definitions:', json.dumps(source_definition)
+                print('\n%s:' % source['omrs_ref_source_name'])
+                print('- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__)
+                print('- Template to add to source definitions:', json.dumps(source_definition))
 
-            print '\n** Missing Sources in OCL:', len(missing_source_in_ocl)
+            print('\n** Missing Sources in OCL:', len(missing_source_in_ocl))
             for source in missing_source_in_ocl:
-                print '\n%s:' % source['omrs_ref_source_name']
-                print '- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__
-                print '- Source Details:', source
+                print('\n%s:' % source['omrs_ref_source_name'])
+                print('- OpenMRS Reference Source Definition:', source['omrs_source'].__dict__)
+                print('- Source Details:', source)
 
         if missing_source_definition or missing_source_in_ocl:
             return False
@@ -361,7 +366,6 @@ class Command(BaseCommand):
         Loop thru all concepts and mappings and generates JSON export in the OCL format.
         Note that the retired status of concepts is not handled here.
         """
-
         # Create the concept enumerator, applying 'concept_id' and 'concept_limit' options
         if self.concept_id is not None:
             # If 'concept_id' option set, fetch a single concept and convert to enumerator
@@ -397,10 +401,10 @@ class Command(BaseCommand):
         # Output
         if len(resource_list_concepts):
             for resource in resource_list_concepts:
-                print json.dumps(resource, indent=self.indent)
+                print(json.dumps(resource, indent=self.indent))
         if len(resource_list_mappings):
             for resource in resource_list_mappings:
-                print json.dumps(resource, indent=self.indent)
+                print(json.dumps(resource, indent=self.indent))
 
     def export_concept(self, concept):
         """
@@ -494,7 +498,7 @@ class Command(BaseCommand):
         if not self.use_gold_mappings:
             return str(concept_id)
         # Skip any codes that aren't numeric
-        if type(concept_id) != int and not unicode(concept_id).isnumeric():
+        if type(concept_id) != int and not str(concept_id).isnumeric():
             return str(concept_id)
         if not self.gold_mappings_dict:
             self.gold_mappings_dict = {}

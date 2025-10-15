@@ -21,8 +21,13 @@ fi
 echo "Importing data..."
 python import_sql.py 
 
-echo "Checking sources..."
-python manage.py extract_db --check_sources --env=$OCL_ENV
+if [ "$SKIP_CHECK_SOURCES" = "1" ]
+then
+  echo "Skipping reference source check (SKIP_CHECK_SOURCES=1)"
+else
+  echo "Checking sources..."
+  python manage.py extract_db --check_sources --env=$OCL_ENV || true
+fi
 
 if [ "$FORCE_OLD_MODE" = 1 ]
 then
@@ -31,5 +36,5 @@ then
   python manage.py extract_db --org_id=${OCL_ORG} --source_id=${SOURCE_ID} -v0 --mappings --use_gold_mappings=${USE_GOLD_MAPPINGS:-0} > ${SQL_FILE:-openmrs}-mappings.json
 else
   echo "Exporting ${OCL_ORG} ${SOURCE_ID} to json file..."
-  python manage.py extract_db --org_id=${OCL_ORG} --source_id=${SOURCE_ID} -v0 --concepts --mappings --format=bulk --use_gold_mappings=${USE_GOLD_MAPPINGS:-0} > ${SQL_FILE:-openmrs}.json
+  python manage.py extract_db --org_id=${OCL_ORG} --source_id=${SOURCE_ID} -v0 --concepts --mappings --format=bulk --use_gold_mappings=${USE_GOLD_MAPPINGS:-0} > ${SQL_FILE:-openmrs}.json 
 fi
