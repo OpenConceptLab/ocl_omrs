@@ -22,12 +22,16 @@ class OclOpenmrsHelper(object):
 
     # Directory of sources with metadata
     SOURCE_DIRECTORY = [
+        {'owner_type': 'org', 'owner_id': 'APHL',
+            'omrs_id': 'APHL SNOMED Extension', 'ocl_id': 'APHL-SNOMED'},
         {'owner_type': 'org', 'owner_id': 'IHTSDO',
             'omrs_id': 'SNOMED CT', 'ocl_id': 'SNOMED-CT'},
         {'owner_type': 'org', 'owner_id': 'IHTSDO',
             'omrs_id': 'SNOMED NP', 'ocl_id': 'SNOMED-NP'},
         {'owner_type': 'org', 'owner_id': 'WHO',
             'omrs_id': 'ICD-10-WHO', 'ocl_id': 'ICD-10-WHO'},
+        {'owner_type': 'org', 'owner_id': 'WHO',
+            'omrs_id': 'ICD-10', 'ocl_id': 'ICD-10-WHO'},
         {'owner_type': 'org', 'owner_id': 'NLM',
             'omrs_id': 'RxNORM', 'ocl_id': 'RxNORM'},
         {'owner_type': 'org', 'owner_id': 'NLM',
@@ -145,7 +149,7 @@ class OclOpenmrsHelper(object):
         {'omrs_id': 'OMOP Extension', 'ocl_id': 'OMOP-Extension',
             'owner_type': 'org', 'owner_id': 'OHDSI'},
  
-        # Added for AMPATH dictionary import
+        # Used for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
         # {'owner_type':'org', 'owner_id':'CIEL', 'omrs_id':'MCL/CIEL', 'ocl_id':'CIEL'},
         # {'owner_type':'org', 'owner_id':'NLM', 'omrs_id':'RxNorm', 'ocl_id':'RxNORM'},
@@ -153,6 +157,10 @@ class OclOpenmrsHelper(object):
         # {'omrs_id': 'local', 'ocl_id': 'AMPATH', 'owner_type': 'org', 'owner_id': 'AMPATH'},
         # {'omrs_id': 'ICD-O', 'ocl_id': 'ICD-O-WHO-Morphology', 'owner_type': 'org', 'owner_id': 'WHO'},
         # {'omrs_id': 'NHDD', 'ocl_id': 'KenyaEMR', 'owner_type': 'org', 'owner_id': 'KenyaMOH'},
+
+        # Used for PIH-Malawi dictionary import
+        # {'omrs_id': 'local', 'ocl_id': 'PIH-Malawi', 'owner_type': 'org', 'owner_id': 'PIH'},
+
     ]
 
     @classmethod
