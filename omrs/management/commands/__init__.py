@@ -148,6 +148,8 @@ class OclOpenmrsHelper(object):
             'owner_type': 'org', 'owner_id': 'OHDSI'},
         {'omrs_id': 'OMOP Extension', 'ocl_id': 'OMOP-Extension',
             'owner_type': 'org', 'owner_id': 'OHDSI'},
+        {'omrs_id': 'HL7 Event Status', 'ocl_id': 'event-status',
+            'owner_type': 'org', 'owner_id': 'HL7'},
  
         # Used for AMPATH dictionary import
         # {'owner_type':'org', 'owner_id':'WHO', 'omrs_id':'ICD-10', 'ocl_id':'ICD-10-WHO'},
