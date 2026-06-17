@@ -6,6 +6,10 @@
 
 ## Generating import
 
+> [!NOTE]
+> Since anonymous API access is no longer allowed, this script
+> now depends on an OCL API token in the file `.ocl_api_token`
+
 Generate OCL-formatted bulk import script from a mysql dump of an OpenMRS v1.11 concept dictionary and to validate its
 map sources against the OCL staging server (staging.openconceptlab.org):
 

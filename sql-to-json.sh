@@ -12,7 +12,7 @@
 #  If USE_GOLD_MAPPINGS=1 in environment, gold mappings will be required and used
 # 
 # Loads the OpenMRS sql file into a database and then exports it to JSON
-
+OCL_API_TOKEN=$(<.ocl_api_token)
 SQL_FILE="${1:-openmrs.sql.zip}"
 OCL_ORG="${2:-CIEL}"
 SOURCE_ID="${3:-CIEL}"
@@ -47,6 +47,7 @@ echo "Processing $SQL_FILE for $OCL_ENV"
 # Start up our database
 
 # SQL_FILE="$SQL_FILE" OCL_ORG="$OCL_ORG" SOURCE_ID="$SOURCE_ID" OCL_ENV="$OCL_ENV" FORCE_OLD_MODE="$FORCE_OLD_MODE"
+export OCL_API_TOKEN
 export SQL_FILE
 export OCL_ORG
 export SOURCE_ID

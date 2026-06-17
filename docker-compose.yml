@@ -18,6 +18,7 @@ services:
     volumes:
       - .:/app
     environment:
+      - OCL_API_TOKEN
       - OCL_ENV
       - OCL_ORG
       - SOURCE_ID

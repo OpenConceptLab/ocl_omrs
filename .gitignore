@@ -38,3 +38,4 @@ media/
 .DS_Store
 
 ocl.db
+.ocl_api_token
