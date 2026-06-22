@@ -437,16 +437,20 @@ class Command(BaseCommand):
         # Concept Names
         names = []
         for concept_name in concept.conceptname_set.all():
-            if not concept_name.voided:
-                # Replace obsolete Indonesian locale of "in" to "id"
-                locale = 'id' if concept_name.locale == 'in' else concept_name.locale
-                names.append({
-                    'name': concept_name.name,
-                    'name_type': concept_name.concept_name_type if concept_name.concept_name_type else '',
-                    'locale': locale,
-                    'locale_preferred': concept_name.locale_preferred,
-                    'external_id': concept_name.uuid,
-                })
+            # Replace obsolete Indonesian locale of "in" to "id"
+            locale = 'id' if concept_name.locale == 'in' else concept_name.locale
+            name = {
+                'name': concept_name.name,
+                'name_type': concept_name.concept_name_type if concept_name.concept_name_type else '',
+                'locale': locale,
+                'locale_preferred': concept_name.locale_preferred,
+                'external_id': concept_name.uuid,
+            }
+            if concept_name.voided:
+                name['retired'] = True
+                if concept_name.void_reason:
+                    name['retire_reason'] = concept_name.void_reason
+            names.append(name)
         data['names'] = names
 
         # Concept Descriptions
