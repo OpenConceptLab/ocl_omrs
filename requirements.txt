@@ -14,7 +14,7 @@ mysql-connector-python==8.0.19
 mysqlclient==1.4.6
 ocldev==0.1.70
 pathlib2==2.3.5
-protobuf==3.6.1
+protobuf==3.18.3
 pyrsistent==0.15.7
 python-dateutil==2.1
 requests==2.22.0
